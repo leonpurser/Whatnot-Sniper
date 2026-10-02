@@ -415,3 +415,16 @@ test('snipe: already winning at the end means no bid', async () => {
   assert.equal(calls.length, 0);
   sniper.disarm('test');
 });
+
+test('stream URL pattern accepts locale prefixes', () => {
+  const re = WBA.constants.STREAM_PATH_PATTERN;
+  const id = '053a6ac7-918c-4419-af44-d3eb38502d2c';
+  for (const path of [`/live/${id}`, `/en-GB/live/${id}`, `/en/live/${id}`, `/de-DE/live/${id}?ref=x`, `/en-gb/live/${id}/`]) {
+    const m = path.match(re);
+    assert.ok(m, path);
+    assert.equal(m[1], id, path);
+  }
+  for (const path of ['/', '/en-GB/', '/en-GB/user/live', '/category/live/x', '/livestream/x']) {
+    assert.equal(path.match(re), null, path);
+  }
+});

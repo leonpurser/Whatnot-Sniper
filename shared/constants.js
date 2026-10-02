@@ -11,8 +11,9 @@
     PORT_NAME: 'wba-panel',
 
     // Verified: /live/<livestreamId>; the same id appears in the auction socket
-    // channel topic "commerce:<livestreamId>".
-    STREAM_PATH_PATTERN: /^\/live\/([^/?#]+)/,
+    // channel topic "commerce:<livestreamId>". Whatnot may prefix a locale,
+    // e.g. /en-GB/live/<id> or /de/live/<id>.
+    STREAM_PATH_PATTERN: /^\/(?:[a-z]{2}(?:-[a-zA-Z]{2,4})?\/)?live\/([^/?#]+)/,
 
     CAPTURE_LIMIT: 3000, // entries kept in the inspection ring buffer
     MAX_STORE_CHARS: 32000, // per-entry payload kept in the buffer (full text is still indexed)
