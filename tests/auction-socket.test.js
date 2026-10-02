@@ -212,3 +212,58 @@ test('real bids: own bid recognised, round trips tighten the clock', () => {
   assert.equal(v.ok, false);
   assert.deepEqual(v.checks.filter((c) => !c.ok).map((c) => c.name), ['not-already-highest']);
 });
+
+const sdFx = require('./fixtures/auction-socket-sudden-death.json');
+function replaySd() {
+  const log = WBA.createLog({ consoleOut: false });
+  const store = WBA.createAuctionStateStore({ log });
+  const clock = WBA.createClock();
+  const capture = WBA.createCaptureStore({ limit: 10, maxStoreChars: 100, keyPattern: /x/, maxFields: 1 });
+  const source = WBA.createAuctionSocketSource();
+  capture.subscribe((entry, json) => source.onCapture(entry, json, { store, clock, log }));
+  store.setStream(sdFx.streamId);
+  const seen = [];
+  for (const e of sdFx.entries) {
+    const { kind, ...payload } = e;
+    capture.add(kind, payload);
+    const f = e.text ? JSON.parse(e.text) : null;
+    if (f) seen.push({ event: f[3], product: f[4] && f[4].product, ts: f[4] && f[4].timestamp, s: JSON.parse(JSON.stringify(store.get())) });
+  }
+  return { store, source, seen };
+}
+
+test('real Sudden Death auctions: end time never moves, late bid accepted', () => {
+  const { seen } = replaySd();
+  const starts = seen.filter((x) => x.event === 'auction_started');
+  assert.equal(starts.length, 4);
+  for (const st of starts) {
+    const id = st.s.auctionId;
+    assert.equal(st.s.suddenDeath, true);
+    assert.equal(st.s.endTimeExtends, false);
+    const own = seen.filter((x) => x.s.auctionId === id && x.event === 'new_bid');
+    for (const b of own) assert.equal(b.s.endTime, st.s.endTime, 'SD end time is fixed');
+    for (const b of own) assert.equal(b.s.endTimeHistory.length, 1);
+  }
+  // The latest accepted bid in the capture: 252 ms before the end, end unchanged.
+  const late = seen.filter((x) => x.event === 'new_bid' && x.product.isAuctionActive && x.ts && x.product.auctionEndTime - x.ts < 300);
+  assert.equal(late.length, 1);
+  assert.equal(late[0].product.auctionEndTime - late[0].ts, 252);
+});
+
+test('auction that starts with a pre-bid has a real current price', () => {
+  const { seen } = replaySd();
+  const first = seen.find((x) => x.event === 'auction_started').s;
+  assert.equal(first.bidCount, 1);
+  assert.equal(first.currentBidMinor, 100);
+  assert.equal(first.nextBidMinor, 200);
+});
+
+test('new_bid for other, not-live products never touches the tracked auction', () => {
+  const { seen } = replaySd();
+  const strays = seen.filter((x) => x.event === 'new_bid' && x.product && x.product.isAuctionActive === false);
+  assert.ok(strays.length >= 2);
+  for (const x of strays) assert.notEqual(x.s.auctionId, x.product.id);
+  // ...including while an auction is live
+  const during = seen.filter((x) => x.s.active && x.event === 'product_updated');
+  for (const x of during) assert.notEqual(x.s.auctionId, x.product.id);
+});

@@ -79,12 +79,25 @@ The second bid carried `price.amountSafe: 700` in addition to `amount`; it is no
 auction), `bumpThresholdSeconds`/`bumpValueSeconds: null`. `auction_ended` arrived
 **1 209 ms** after `auctionEndTime` (normal auctions: 859–898 ms).
 
+## Capture 3: 2026-10-02, four Sudden Death auctions (stream `59c54b1e…`)
+
+- **The end time is fixed.** `auctionEndTime` never changed on any `new_bid`, in all 4
+  auctions. One bid was accepted **252 ms** before the end (server timestamp), and the
+  end time did not move.
+- These SD auctions last about 9.9 s from `auction_started`.
+- `auction_ended` arrived **977–1150 ms** after `auctionEndTime` (estimated server clock).
+- Someone else's late bid reaches us about 70 ms after its server timestamp. If we are
+  outbid at T−300 ms, we learn about it at around T−230 ms.
+- An auction can **start with a bid already on it** (`auction_started` with `bidCount: 1`,
+  highest £1, next £2), probably a pre-bid.
+- `new_bid`, `product_pinned` and `product_unpinned` also arrive for **other,
+  not-yet-live products** (`isAuctionActive: false`, no `auctionEndTime`). These are
+  ignored unless they carry the tracked auction's id.
+
 ### Still unknown
 
-1. Whether a Sudden Death end time really stays fixed when bids land late. Every
-   structural signal says yes, but no late bid has been observed yet.
-2. **The real acceptance cutoff.** Is a bid accepted at T−100 ms? At T+100 ms, inside
+1. **The real acceptance cutoff.** Is a bid accepted at T−100 ms? At T+100 ms, inside
    the ~0.9–1.2 s before `auction_ended`? This can only be measured with dry runs first,
    then small live bids, comparing `serverRemainingMs` with the outcome.
-3. What a rejected bid's `phx_reply` looks like (`status: "error"` presumably), and
+2. What a rejected bid's `phx_reply` looks like (`status: "error"` presumably), and
    whether `bidAccepted: false` is ever broadcast.
