@@ -1,0 +1,50 @@
+BID ASSISTANT FOR WHATNOT: USER GUIDE
+=====================================
+
+WHAT IT DOES
+A side panel for Chrome that follows the live auction on a Whatnot show: item,
+current bid, exact time left, and whether it is Sudden Death. It can bid for
+you with one tap, or automatically. It uses the Whatnot tab you are already
+logged into and never asks for your password.
+
+INSTALL
+1. Unzip the extension folder.
+2. In Chrome, go to chrome://extensions and turn on "Developer mode" (top right).
+3. Click "Load unpacked" and select the unzipped folder.
+4. Pin the extension (puzzle icon > pin) for easy access.
+5. Open (or reload) a Whatnot live show, then click the extension icon.
+   The panel opens on the right.
+
+BID BUTTON
+Works like Whatnot's own bid button. One tap places a real bid at the amount
+shown (e.g. "Bid £24"). No max needed. It won't bid if you're already winning.
+
+AUTO-BID
+1. Set "Max bid". It will never bid above this.
+2. Choose a mode:
+   - Snipe: one bid just before the end ("Bid at ... ms left").
+     On normal auctions it re-snipes if you're outbid and the timer resets.
+   - Snipe + re-bid: as Snipe. If someone outbids you after your snipe and
+     there is still enough time ("Re-bid if >= ... ms left"), it bids again
+     straight away. Best for Sudden Death.
+   - Keep winning: bids whenever you're not the top bidder, at any time,
+     up to your max.
+3. Tap "Arm auto-bid" on the current auction. It disarms when the auction ends.
+
+DRY RUN VS LIVE
+Auto-bid starts in Dry run: it shows what it would bid but sends nothing.
+Flip the switch to Live and confirm to place real bids. Live switches back to
+Dry run whenever the page reloads or you change show.
+
+TIPS
+- Keep the Whatnot tab visible. Chrome slows down background tabs.
+- Start with "Bid at 1000 ms" and lower it gradually. Bids take roughly
+  50-60 ms to reach Whatnot.
+- "Closing..." means the timer has hit zero and Whatnot hasn't confirmed the
+  end yet (usually about 1 second).
+- If the panel says "Reload the Whatnot tab", do that. It happens after
+  installing or updating the extension.
+
+IMPORTANT
+Every accepted bid is binding, just like bidding by hand. Automated bidding may
+be against Whatnot's terms, so use it at your own risk.

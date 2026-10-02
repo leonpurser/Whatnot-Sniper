@@ -8,5 +8,5 @@ version=$(node -p "require('./manifest.json').version")
 out="dist/whatnot-bid-assistant-$version.zip"
 mkdir -p dist
 rm -f "$out"
-zip -qr "$out" manifest.json background content page shared sidepanel icons -x '*.DS_Store'
+zip -qr "$out" USER_GUIDE.txt manifest.json background content page shared sidepanel icons -x '*.DS_Store'
 echo "$out ($(du -h "$out" | cut -f1))"
