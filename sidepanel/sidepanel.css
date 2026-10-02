@@ -173,7 +173,17 @@ select {
 }
 .empty p {
   margin: 0 auto;
+  max-width: 270px;
+}
+.empty-action {
   max-width: 260px;
+  margin-top: 18px;
+}
+.empty-detail {
+  margin-top: 12px !important;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
 }
 
 /* ----------------------------------------------------------------- cards -- */

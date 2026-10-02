@@ -44,6 +44,10 @@ TIPS
   end yet (usually about 1 second).
 - If the panel says "Reload the Whatnot tab", do that. It happens after
   installing or updating the extension.
+- Still not connecting? Click the puzzle icon > Bid Assistant and make sure
+  it can access whatnot.com (or press "Allow on whatnot.com" in the panel).
+  It doesn't run in Incognito unless you enable "Allow in Incognito" in
+  chrome://extensions.
 
 IMPORTANT
 Every accepted bid is binding, just like bidding by hand. Automated bidding may

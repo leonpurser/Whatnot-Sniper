@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Whatnot Bid Assistant",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Live-auction bid assistant for Whatnot: real-time auction state, one-tap bidding and a configurable sniper.",
   "minimum_chrome_version": "116",
   "icons": {

@@ -18,59 +18,157 @@
   let bidBusy = false; // a BID NOW request is in flight
 
   // ------------------------------------------------------------ connection --
-  async function connect() {
+  // The panel talks to the content script in the active Whatnot tab over a Port.
+  // A reload/navigation of that tab kills the content script, which closes the
+  // Port; we then reconnect. Whatnot's in-app URL changes do NOT need a new Port.
+  const WHATNOT_ORIGINS = ['https://www.whatnot.com/*', 'https://whatnot.com/*'];
+  let connecting = null; // serialise connect() calls
+  let problem = null; // { title, body, action? } when we cannot reach the tab
+
+  function connect() {
+    if (!connecting) connecting = doConnect().finally(() => (connecting = null));
+    return connecting;
+  }
+
+  async function doConnect() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !/^https:\/\/(www\.)?whatnot\.com\//.test(tab.url || '')) {
       setConn('Not on Whatnot', '');
       dropPort();
       tabId = tab ? tab.id : null;
       snap = null;
+      problem = null;
       render();
       return;
     }
     if (port && tabId === tab.id) return;
     dropPort();
     tabId = tab.id;
-    port = chrome.tabs.connect(tab.id, { name: C.PORT_NAME });
-    port.onMessage.addListener(onPortMessage);
-    port.onDisconnect.addListener(() => {
-      void chrome.runtime.lastError;
-      port = null;
-      setConn('Reconnecting…', '');
-      setTimeout(connect, 1500);
-    });
-    try {
-      const s = await request(M.GET_SNAPSHOT);
-      snap = s;
-      $('log').textContent = '';
-      (s.log || []).forEach(appendLog);
-      if (s.lastPick) showProbe(s.lastPick);
-      render();
-    } catch (e) {
-      setConn('Reload the Whatnot tab', '');
-      snap = null;
-      render(true);
+
+    // Diagnose the usual reasons the content script is not running.
+    if (tab.incognito && !(await chrome.extension.isAllowedIncognitoAccess())) {
+      return showProblem({
+        title: 'Incognito isn’t allowed',
+        body: 'Open the show in a normal window, or enable “Allow in Incognito” for Bid Assistant in chrome://extensions.',
+      });
+    }
+    const granted = await chrome.permissions.contains({ origins: WHATNOT_ORIGINS }).catch(() => true);
+    if (!granted) {
+      return showProblem({
+        title: 'Allow access to Whatnot',
+        body: 'Chrome is blocking the assistant on whatnot.com (site access). Allow it, then reload the Whatnot tab.',
+        action: { label: 'Allow on whatnot.com', run: requestAccess },
+      });
+    }
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const s = await openPort(tab.id);
+        problem = null;
+        snap = s;
+        $('log').textContent = '';
+        (s.log || []).forEach(appendLog);
+        if (s.lastPick) showProbe(s.lastPick);
+        render();
+        return;
+      } catch (e) {
+        if (attempt === 3) {
+          const missing = /Receiving end does not exist|Could not establish connection|disconnected/i.test(String(e.message));
+          if (/failed to start/i.test(String(e.message))) {
+            return showProblem({
+              title: 'Bid Assistant couldn’t start',
+              body: 'Something on this page stopped the assistant from starting. Reload the tab; if it keeps happening, send the error below to whoever set it up.',
+              action: { label: 'Reload Whatnot tab', run: () => chrome.tabs.reload(tab.id) },
+              detail: String(e.message),
+            });
+          }
+          return showProblem({
+            title: 'Reload the Whatnot tab',
+            body: missing
+              ? 'The assistant isn’t running in this tab yet. Reload it once the extension is installed or updated. If it still doesn’t connect, check the extension is enabled and has site access to whatnot.com (puzzle icon › Bid Assistant).'
+              : `The Whatnot tab didn’t respond (${e.message}). Reload the tab.`,
+            action: { label: 'Reload Whatnot tab', run: () => chrome.tabs.reload(tab.id) },
+            detail: String(e.message),
+          });
+        }
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
     }
   }
+
+  /** Open a Port to the tab and fetch the first snapshot. Rejects if nobody answers. */
+  function openPort(id) {
+    return new Promise((resolve, reject) => {
+      const p = chrome.tabs.connect(id, { name: C.PORT_NAME });
+      let settled = false;
+      p.onMessage.addListener(onPortMessage);
+      p.onDisconnect.addListener(() => {
+        const err = chrome.runtime.lastError;
+        if (port === p) {
+          port = null;
+          for (const { reject: rj } of pending.values()) rj(new Error('disconnected'));
+          pending.clear();
+          // The tab reloaded or navigated away: reconnect shortly.
+          setConn('Reconnecting…', '');
+          setTimeout(connect, 800);
+        }
+        if (!settled) {
+          settled = true;
+          reject(new Error((err && err.message) || 'disconnected'));
+        }
+      });
+      port = p;
+      request(M.GET_SNAPSHOT, {}, 5000).then(
+        (s) => {
+          settled = true;
+          resolve(s);
+        },
+        (e) => {
+          if (settled) return;
+          settled = true;
+          if (port === p) dropPort();
+          reject(e);
+        }
+      );
+    });
+  }
+
+  async function requestAccess() {
+    try {
+      const ok = await chrome.permissions.request({ origins: WHATNOT_ORIGINS });
+      if (ok && tabId != null) chrome.tabs.reload(tabId);
+    } catch (e) {
+      appendLog({ t: Date.now(), level: 'error', msg: `panel: ${e.message}` });
+    }
+  }
+
+  function showProblem(p) {
+    problem = p;
+    snap = null;
+    setConn(p.title, '');
+    render();
+  }
+
   function dropPort() {
-    if (port) {
+    const p = port;
+    port = null;
+    if (p) {
       try {
-        port.disconnect();
+        p.disconnect();
       } catch (_) {
         /* ignore */
       }
     }
-    port = null;
     for (const { reject } of pending.values()) reject(new Error('disconnected'));
     pending.clear();
   }
   chrome.tabs.onActivated.addListener(() => connect());
   chrome.tabs.onUpdated.addListener((id, info) => {
-    if (info.status === 'complete' || info.url) {
-      if (id === tabId) dropPort();
-      connect();
-    }
+    // Only a finished load (or switching to/from Whatnot) needs attention; connect()
+    // is a no-op while the Port to this tab is still open.
+    if (info.status === 'complete' || (info.url && id !== tabId)) connect();
   });
+  chrome.permissions.onAdded.addListener(() => connect());
 
   function setConn(text, cls) {
     $('connText').textContent = text;
@@ -167,15 +265,26 @@
   // ---------------------------------------------------------------- render --
   const shortMoney = (m, cur) => (m == null ? '—' : fmtMoney(m, cur));
 
-  function render(hookMissing) {
+  function render() {
     const onStream = !!(snap && snap.streamId);
     $('emptyState').classList.toggle('hidden', onStream);
     $('app').classList.toggle('hidden', !onStream);
     if (!onStream) {
-      $('emptyTitle').textContent = hookMissing ? 'Reload the Whatnot tab' : snap ? 'Open a live show' : 'Open a Whatnot show';
-      $('emptyBody').textContent = hookMissing
-        ? 'The assistant was installed or updated after this tab opened.'
-        : 'Go to a live show on whatnot.com and this panel will follow the auction.';
+      const btn = $('emptyAction');
+      if (problem) {
+        $('emptyTitle').textContent = problem.title;
+        $('emptyBody').textContent = problem.body;
+        btn.classList.toggle('hidden', !problem.action);
+        if (problem.action) btn.textContent = problem.action.label;
+        $('emptyDetail').textContent = problem.detail || '';
+      } else {
+        $('emptyTitle').textContent = snap ? 'Open a live show' : 'Open a Whatnot show';
+        $('emptyBody').textContent = snap
+          ? 'You’re on Whatnot. Open a live show and this panel will follow the auction.'
+          : 'Go to a live show on whatnot.com and this panel will follow the auction.';
+        btn.classList.add('hidden');
+        $('emptyDetail').textContent = '';
+      }
       document.body.classList.remove('live');
       return;
     }
@@ -434,6 +543,7 @@
       t.appendChild(tr);
     }
   }
+  $('emptyAction').addEventListener('click', () => problem && problem.action && problem.action.run());
   $('devTools').addEventListener('toggle', () => snap && snap.streamId && renderDebug());
 
   // ------------------------------------------------- countdown (per frame) --
