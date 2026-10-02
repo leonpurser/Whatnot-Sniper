@@ -18,6 +18,7 @@
     GLOBALS_PROBE: 'globalsProbe',
     ADD_MARKER: 'addMarker',
     SET_LIVE: 'setLive',
+    BID_DIAGNOSTICS: 'bidDiagnostics',
     BID_NOW: 'bidNow',
     ARM: 'arm',
     DISARM: 'disarm',

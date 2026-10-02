@@ -186,7 +186,7 @@ test('executor dry-run logs WOULD BID, sends nothing and blocks duplicates', asy
   assert.equal(r1.ok, true);
   assert.equal(r1.reason, 'DRY_RUN');
   assert.equal(sent.length, 0);
-  assert.ok(log.entries().some((e) => e.msg.startsWith('WOULD BID auction=A1')));
+  assert.ok(log.entries().some((e) => e.msg.includes('WOULD BID auction=A1')));
   assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'DUPLICATE');
 });
 

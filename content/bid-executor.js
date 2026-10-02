@@ -82,7 +82,7 @@
         const fm = (m) => WBA.money.formatMoney(m, s.currency);
         if (ctx.dryRun) {
           log.info(
-            `WOULD BID auction=${expectedAuctionId} current=${fm(base.currentMinor)} bid=${fm(v.bidAmountMinor)} ` +
+            `DRY RUN — nothing sent. WOULD BID auction=${expectedAuctionId} current=${fm(base.currentMinor)} bid=${fm(v.bidAmountMinor)} ` +
               `max=${fm(maxBidMinor)} target=${base.targetMs ?? '—'}ms triggered=${base.remainingMs}ms before end`
           );
           return record({ ...base, ok: true, reason: 'DRY_RUN' });

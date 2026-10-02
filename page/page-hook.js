@@ -237,6 +237,23 @@
     });
   }
 
+  /** What placeBid would see right now (no side effects). */
+  function bidDiagnostics({ topic }) {
+    const sockets = Array.from(auctionSockets.entries()).map(([id, s]) => ({
+      socket: id,
+      readyState: s.ws.readyState,
+      joins: Array.from(s.joins.entries()).map(([t, j]) => ({ topic: t, joinRef: j.joinRef, ok: j.ok })),
+    }));
+    const latest = latestByTopic.get(topic) || null;
+    let wouldSend = 'yes';
+    if (!sockets.length) wouldSend = 'NO: no auction socket seen. Was the tab reloaded after installing/updating the extension?';
+    else if (!sockets.some((s) => s.readyState === NativeWS.OPEN && s.joins.some((j) => j.topic === topic && j.ok)))
+      wouldSend = `NO: auction socket has not joined ${topic}`;
+    else if (!latest) wouldSend = 'NO: no auction seen on this stream yet';
+    else if (!latest.active) wouldSend = 'NO: current auction is not active';
+    return { topic, wouldSend, sockets, latest };
+  }
+
   // ----------------------------------------------------------------- fetch --
   const nativeFetch = window.fetch;
   if (nativeFetch) {
@@ -626,6 +643,7 @@
     'pick-start': startPick,
     'pick-stop': () => (stopPick(), { stopped: true }),
     'place-bid': placeBid,
+    'bid-diagnostics': bidDiagnostics,
   };
   window.addEventListener('message', (ev) => {
     const d = ev.data;

@@ -153,12 +153,13 @@
     $('type').className = 'v' + (s && s.suddenDeath ? ' sd' : '');
     const armed = snap && snap.armed;
     $('status').textContent = !snap ? '—' : armed ? `ARMED (${armed.auctionId})` : s.status.toUpperCase();
-    $('arm').textContent = armed ? 'DISARM' : 'ARM AUTO BID';
     $('arm').classList.toggle('armed', !!armed);
     $('noSources').classList.toggle('hidden', !!(snap && snap.sources && snap.sources.length));
     const live = !!(snap && snap.liveMode);
     $('dryRun').checked = !live;
     $('modeNote').textContent = live ? 'LIVE — bids are placed for real' : 'no real bids are sent';
+    $('bidNow').textContent = live ? 'BID NOW (LIVE)' : 'BID NOW (dry run)';
+    $('arm').textContent = armed ? 'DISARM' : live ? 'ARM AUTO BID (LIVE)' : 'ARM AUTO BID (dry run)';
     document.body.classList.toggle('live', live);
     renderHistory(snap && snap.history, cur);
     renderAttempt(snap && snap.lastAttempt, cur);
@@ -437,6 +438,7 @@
   $('reactBtn').addEventListener('click', (ev) =>
     run(ev.target, async () => showProbe(await request(M.REACT_PROBE, { selector: $('reactSelector').value.trim() })))
   );
+  $('diagBtn').addEventListener('click', (ev) => run(ev.target, async () => showProbe(await request(M.BID_DIAGNOSTICS))));
   $('globalsBtn').addEventListener('click', (ev) => run(ev.target, async () => showProbe(await request(M.GLOBALS_PROBE))));
   $('copyProbe').addEventListener('click', () => {
     if (lastProbe) navigator.clipboard.writeText(JSON.stringify(lastProbe, null, 2)).catch(() => {});

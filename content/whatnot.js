@@ -214,6 +214,18 @@
       log.info(`MARKER: ${e.text}`);
       return { seq: e.seq };
     },
+    [M.BID_DIAGNOSTICS]: async () => {
+      const page = await bridge.request('bid-diagnostics', { topic: `commerce:${store.getStreamId()}` });
+      const s = store.get();
+      return {
+        mode: liveMode ? 'LIVE' : 'DRY RUN (nothing is sent to Whatnot)',
+        pageHook: page,
+        selfUserId: selfUserId(),
+        maxBid: settings.maxBidMinor,
+        auction: { id: s.auctionId, active: s.active, next: s.nextBidMinor, highestBidderId: s.highestBidderId },
+        lastAttempt: executor.getLastAttempt(),
+      };
+    },
     [M.SET_LIVE]: ({ on, confirmed }) => {
       if (on && confirmed !== true) throw new Error('live mode needs confirmation');
       liveMode = !!on;
