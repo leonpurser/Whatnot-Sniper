@@ -15,12 +15,13 @@
   let nextReqId = 1;
   const pending = new Map();
   let lastProbe = null;
+  let bidBusy = false; // a BID NOW request is in flight
 
   // ------------------------------------------------------------ connection --
   async function connect() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !/^https:\/\/(www\.)?whatnot\.com\//.test(tab.url || '')) {
-      setConn('open a Whatnot tab', 'off');
+      setConn('Not on Whatnot', '');
       dropPort();
       tabId = tab ? tab.id : null;
       snap = null;
@@ -35,19 +36,20 @@
     port.onDisconnect.addListener(() => {
       void chrome.runtime.lastError;
       port = null;
-      setConn('disconnected — reload the Whatnot tab if this persists', 'off');
+      setConn('Reconnecting…', '');
       setTimeout(connect, 1500);
     });
     try {
       const s = await request(M.GET_SNAPSHOT);
-      setConn('connected', 'on');
       snap = s;
       $('log').textContent = '';
       (s.log || []).forEach(appendLog);
       if (s.lastPick) showProbe(s.lastPick);
       render();
     } catch (e) {
-      setConn('content script not responding — reload the Whatnot tab', 'off');
+      setConn('Reload the Whatnot tab', '');
+      snap = null;
+      render(true);
     }
   }
   function dropPort() {
@@ -71,8 +73,8 @@
   });
 
   function setConn(text, cls) {
-    $('conn').textContent = text;
-    $('conn').className = 'pill ' + cls;
+    $('connText').textContent = text;
+    $('conn').className = 'conn ' + cls;
   }
 
   function request(type, args = {}, timeoutMs = 15000) {
@@ -110,48 +112,45 @@
 
   // -------------------------------------------------------------- settings --
   let settings = { ...C.DEFAULT_SETTINGS };
+  const MODE_HELP = {
+    snipe: 'One bid at your chosen moment before the end. Normal auctions re-snipe automatically if you are outbid, because their timer resets.',
+    'snipe-rebid': 'Snipes at the end. If someone outbids you after that and there is still time, it bids again straight away. Best for Sudden Death.',
+    'keep-winning': 'Bids whenever you are not the highest bidder, at any time, until your max.',
+  };
   chrome.storage.local.get('settings').then(({ settings: s }) => {
     settings = { ...C.DEFAULT_SETTINGS, ...(s || {}) };
     $('maxBid').value = settings.maxBidMinor != null ? (settings.maxBidMinor / 100).toString() : '';
     $('targetMs').value = settings.targetMs;
     $('minRebidMs').value = settings.minRebidMs;
-    $('autoMode').value = settings.autoMode;
-    renderModeHelp();
-  });
-  const MODE_HELP = {
-    snipe: 'One bid at the chosen time before the end. Normal auctions re-snipe automatically when outbid (their timer resets).',
-    'snipe-rebid': 'Snipes at the end; if someone outbids you after that and enough time is left, bids again straight away (key for Sudden Death).',
-    'keep-winning': 'Bids as soon as you are not the highest bidder, at any time, until your maximum.',
-  };
-  function renderModeHelp() {
-    const m = $('autoMode').value;
-    $('modeHelp').textContent = MODE_HELP[m] || '';
-    $('timingRow').classList.toggle('hidden', m === 'keep-winning');
-    $('rebidRow').classList.toggle('hidden', m !== 'snipe-rebid');
-  }
-  $('autoMode').addEventListener('change', () => {
-    renderModeHelp();
-    saveSettings({ autoMode: $('autoMode').value });
-  });
-  $('minRebidMs').addEventListener('change', () => {
-    const v = Math.min(5000, Math.max(0, Math.round(Number($('minRebidMs').value)) || 0));
-    $('minRebidMs').value = v;
-    saveSettings({ minRebidMs: v });
+    renderMode();
   });
   function saveSettings(patch) {
     settings = { ...settings, ...patch };
     return chrome.storage.local.set({ settings });
   }
+  function renderMode() {
+    const m = settings.autoMode;
+    for (const b of $('modeSeg').querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.mode === m));
+    $('modeHelp').textContent = MODE_HELP[m] || '';
+    $('timingField').classList.toggle('hidden', m === 'keep-winning');
+    $('rebidField').classList.toggle('hidden', m !== 'snipe-rebid');
+  }
+  $('modeSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-mode]');
+    if (!b) return;
+    saveSettings({ autoMode: b.dataset.mode });
+    renderMode();
+  });
   $('maxBid').addEventListener('change', () => {
+    const pill = $('maxBid').parentElement;
     const raw = $('maxBid').value.trim();
-    if (!raw) return saveSettings({ maxBidMinor: null });
-    const parsed = WBA.money.parseMoney(raw);
-    if (!parsed || parsed.minor <= 0) {
-      $('maxBid').classList.add('bad');
-      return;
+    if (!raw) {
+      pill.classList.remove('bad');
+      return saveSettings({ maxBidMinor: null });
     }
-    $('maxBid').classList.remove('bad');
-    saveSettings({ maxBidMinor: parsed.minor });
+    const parsed = WBA.money.parseMoney(raw);
+    pill.classList.toggle('bad', !parsed || parsed.minor <= 0);
+    if (parsed && parsed.minor > 0) saveSettings({ maxBidMinor: parsed.minor });
   });
   $('targetMs').addEventListener('change', () => {
     const v = Math.round(Number($('targetMs').value));
@@ -159,57 +158,186 @@
     $('targetMs').value = clamped;
     saveSettings({ targetMs: clamped });
   });
+  $('minRebidMs').addEventListener('change', () => {
+    const v = Math.min(5000, Math.max(0, Math.round(Number($('minRebidMs').value)) || 0));
+    $('minRebidMs').value = v;
+    saveSettings({ minRebidMs: v });
+  });
 
   // ---------------------------------------------------------------- render --
-  function render() {
-    const s = snap && snap.state;
-    const cur = s && s.currency;
-    $('streamId').textContent = (snap && snap.streamId) || (snap ? 'not on a livestream page' : '—');
-    $('itemName').textContent = (s && s.itemName) || '—';
-    $('current').textContent = !s
-      ? '—'
-      : s.bidCount === 0
-        ? 'no bids'
-        : fmtMoney(s.currentBidMinor, cur) + (s.highestBidder ? ` (${s.highestBidder})` : '');
-    $('next').textContent = s ? fmtMoney(s.nextBidMinor, cur) : '—';
-    $('type').textContent = !s || s.suddenDeath == null ? 'unknown' : s.suddenDeath ? 'SUDDEN DEATH' : 'NORMAL';
-    $('type').className = 'v' + (s && s.suddenDeath ? ' sd' : '');
-    const armed = snap && snap.armed;
-    $('status').textContent = !snap ? '—' : armed ? `ARMED (${armed.auctionId})` : s.status.toUpperCase();
-    $('arm').classList.toggle('armed', !!armed);
-    $('noSources').classList.toggle('hidden', !!(snap && snap.sources && snap.sources.length));
-    const live = !!(snap && snap.liveMode);
-    $('dryRun').checked = !live;
-    $('modeNote').textContent = live ? 'LIVE — the sniper places real bids' : 'sniper sends nothing';
-    const canBid = s && s.active && Number.isInteger(s.nextBidMinor);
-    $('bidNow').textContent = canBid ? `BID ${fmtMoney(s.nextBidMinor, cur)}` : 'BID';
-    $('bidNow').disabled = !canBid;
-    $('arm').textContent = armed ? 'DISARM' : live ? 'ARM AUTO BID (LIVE)' : 'ARM AUTO BID (dry run)';
-    document.body.classList.toggle('live', live);
-    renderHistory(snap && snap.history, cur);
-    renderAttempt(snap && snap.lastAttempt, cur);
-    renderDebug();
-    if (snap) {
-      const c = snap.capture;
-      $('capStats').textContent =
-        `${c.recording ? 'REC' : 'PAUSED'} · buffered ${c.buffered}/${c.limit} · fields ${c.fields} · ` +
-        Object.entries(c.counts)
-          .map(([k, v]) => `${k}:${v}`)
-          .join(' ');
-      $('recToggle').textContent = c.recording ? 'Pause recording' : 'Resume recording';
+  const shortMoney = (m, cur) => (m == null ? '—' : fmtMoney(m, cur));
+
+  function render(hookMissing) {
+    const onStream = !!(snap && snap.streamId);
+    $('emptyState').classList.toggle('hidden', onStream);
+    $('app').classList.toggle('hidden', !onStream);
+    if (!onStream) {
+      $('emptyTitle').textContent = hookMissing ? 'Reload the Whatnot tab' : snap ? 'Open a live show' : 'Open a Whatnot show';
+      $('emptyBody').textContent = hookMissing
+        ? 'The assistant was installed or updated after this tab opened.'
+        : 'Go to a live show on whatnot.com and this panel will follow the auction.';
+      document.body.classList.remove('live');
+      return;
     }
+
+    const s = snap.state;
+    const cur = s.currency;
+    const live = !!snap.liveMode;
+    const armed = snap.armed;
+    const alive = s.lastAlivePerf != null;
+    setConn(live ? 'Auto-bid live' : alive ? 'Connected' : 'Waiting for show data', live ? 'on live' : alive ? 'on' : '');
+    document.body.classList.toggle('live', live);
+
+    // ---- auction card
+    const running = s.active && !s.ended;
+    const badge = $('typeBadge');
+    if (!s.auctionId) {
+      badge.textContent = 'Waiting';
+      badge.className = 'badge';
+    } else if (s.ended) {
+      badge.textContent = s.suddenDeath ? 'Sudden death · ended' : 'Ended';
+      badge.className = 'badge';
+    } else if (s.suddenDeath) {
+      badge.textContent = '☠ Sudden death';
+      badge.className = 'badge sd';
+    } else {
+      badge.textContent = 'Live auction';
+      badge.className = 'badge live';
+    }
+    $('bidCount').textContent = s.bidCount != null && s.auctionId ? `${s.bidCount} bid${s.bidCount === 1 ? '' : 's'}` : '';
+    $('itemName').textContent = s.itemName || (s.auctionId ? 'Untitled item' : 'Waiting for the next auction…');
+    $('current').textContent = !s.auctionId ? '—' : s.bidCount === 0 ? 'No bids' : shortMoney(s.currentBidMinor, cur);
+
+    const win = $('winner');
+    const youWin = s.bidCount > 0 && snap.selfUserId != null && String(s.highestBidderId) === String(snap.selfUserId);
+    win.classList.toggle('hidden', !s.auctionId || !s.bidCount);
+    win.classList.toggle('win', youWin);
+    win.textContent = youWin ? (s.ended ? 'You won' : 'You’re winning') : s.highestBidder ? `@${s.highestBidder}` : '';
+
+    // A bid result belongs to the auction it was for.
+    if (showBidResult.auctionId && showBidResult.auctionId !== s.auctionId) {
+      $('bidResult').classList.add('hidden');
+      showBidResult.auctionId = null;
+    }
+    const canBid = running && Number.isInteger(s.nextBidMinor) && !youWin;
+    $('bidNow').disabled = !canBid || bidBusy;
+    $('bidNow').classList.toggle('winning', youWin && running);
+    $('bidNow').textContent = youWin && running ? 'You’re the top bidder' : running && Number.isInteger(s.nextBidMinor) ? `Bid ${shortMoney(s.nextBidMinor, cur)}` : 'Bid';
+
+    // ---- auto-bid card
+    const toggle = $('liveToggle');
+    toggle.checked = live;
+    toggle.closest('.switch').classList.toggle('on', live);
+    $('liveLabel').textContent = live ? 'Live' : 'Dry run';
+    const arm = $('arm');
+    arm.classList.toggle('armed', !!armed);
+    arm.classList.toggle('dry', !!armed && !live);
+    arm.textContent = armed ? (live ? 'Armed · tap to disarm' : 'Armed (dry run) · tap to disarm') : 'Arm auto-bid';
+    arm.disabled = !armed && !running;
+    renderAutoStatus(s, cur, live, armed);
+
+    renderHistory(snap.history, cur);
+    renderAttempt(snap.lastAttempt, cur);
+    renderDebug();
+    const c = snap.capture;
+    $('capStats').textContent =
+      `${c.recording ? 'REC' : 'PAUSED'} · buffered ${c.buffered}/${c.limit} · fields ${c.fields} · ` +
+      Object.entries(c.counts)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(' ');
+    $('recToggle').textContent = c.recording ? 'Pause recording' : 'Resume recording';
+  }
+
+  function renderAutoStatus(s, cur, live, armed) {
+    const el = $('autoStatus');
+    el.classList.toggle('live', !!armed && live);
+    const a = snap.lastAttempt;
+    if (armed) {
+      const plan = snap.plan;
+      const max = shortMoney(snap.settings.maxBidMinor, cur);
+      if (armed.mode === 'keep-winning') el.textContent = `Keeping you on top up to ${max}`;
+      else if (plan) el.textContent = `Will bid ${snap.settings.targetMs} ms before the end · max ${max}`;
+      else el.textContent = `Watching · max ${max}`;
+    } else if (a && a.trigger === 'auto') {
+      el.textContent = `Last auto-bid: ${friendly(a, cur).title}`;
+    } else {
+      el.textContent = Number.isInteger(snap.settings.maxBidMinor) ? '' : 'Set a max bid to arm';
+    }
+  }
+
+  const CHECK_TEXT = {
+    'not-already-highest': 'You’re already the highest bidder',
+    'auction-active': 'This auction isn’t live',
+    'not-ended': 'The auction has ended',
+    'end-time-known': 'Waiting for the auction timer',
+    'state-fresh': 'Lost the live connection — reload the Whatnot tab',
+    'next-bid-known': 'Waiting for the next bid amount',
+    'next-bid-above-current': 'Waiting for the next bid amount',
+    'price-known': 'Waiting for the current price',
+    'auction-identity': 'The auction changed — try again',
+    'stream-matches': 'The show changed — try again',
+    'within-max': 'Next bid is above your max',
+    'max-set': 'Set a max bid first',
+    armed: 'Auto-bid isn’t armed',
+    'armed-auction-matches': 'Armed on a different auction',
+  };
+  const NOT_SENT_TEXT = {
+    PRICE_MOVED: 'The price just moved — tap again',
+    AUCTION_CHANGED: 'The auction just changed',
+    AUCTION_NOT_ACTIVE: 'The auction just ended',
+    NO_JOINED_SOCKET: 'Not connected to the auction — reload the Whatnot tab',
+    NO_AUCTION_SEEN: 'Not connected to the auction — reload the Whatnot tab',
+  };
+
+  /** Human summary of a bid attempt: { tone, title, sub }. */
+  function friendly(a, cur) {
+    const amt = shortMoney(a.amountMinor, a.currency || cur);
+    if (a.reason === 'ACCEPTED') {
+      const sub = [a.rttMs != null ? `confirmed in ${a.rttMs} ms` : '', a.serverRemainingMs != null && a.serverRemainingMs < 10000 ? `${a.serverRemainingMs} ms before the end` : '']
+        .filter(Boolean)
+        .join(' · ');
+      return { tone: 'ok', title: `Bid placed · ${amt}`, sub };
+    }
+    if (a.reason === 'DRY_RUN') return { tone: '', title: `Dry run · would bid ${amt}`, sub: a.remainingMs != null ? `${a.remainingMs} ms before the end` : '' };
+    if (a.reason === 'VALIDATION_FAILED') {
+      const first = (a.failed || []).map((n) => CHECK_TEXT[n]).find(Boolean);
+      return { tone: 'fail', title: first || 'Bid blocked by a safety check', sub: '' };
+    }
+    if (a.reason && a.reason.startsWith('NOT_SENT_')) {
+      const k = a.reason.slice('NOT_SENT_'.length);
+      return { tone: 'fail', title: NOT_SENT_TEXT[k] || 'Bid not sent', sub: a.detail || '' };
+    }
+    if (a.reason === 'REJECTED') return { tone: 'fail', title: `Whatnot rejected the ${amt} bid`, sub: 'Someone may have bid first' };
+    if (a.reason === 'NO_REPLY') return { tone: 'warn', title: 'Sent, but Whatnot didn’t confirm', sub: 'Check the stream to see if it landed' };
+    if (a.reason === 'DUPLICATE') return { tone: 'fail', title: `Already bid ${amt}`, sub: '' };
+    if (a.reason === 'BID_IN_PROGRESS') return { tone: 'fail', title: 'A bid is already in progress', sub: '' };
+    return { tone: 'fail', title: 'Bid failed', sub: a.error || a.reason || '' };
+  }
+
+  function showBidResult(a) {
+    const el = $('bidResult');
+    if (!a) return el.classList.add('hidden');
+    const f = friendly(a, snap && snap.state.currency);
+    showBidResult.auctionId = a.expectedAuctionId || null;
+    el.className = `result ${f.tone}`;
+    el.textContent = f.title;
+    if (f.sub) {
+      const sub = document.createElement('span');
+      sub.className = 'sub';
+      sub.textContent = f.sub;
+      el.appendChild(sub);
+    }
+    clearTimeout(showBidResult.t);
+    showBidResult.t = setTimeout(() => el.classList.add('hidden'), 6000);
   }
 
   function renderAttempt(a, cur) {
     const el = $('lastAttempt');
-    if (!a) return el.classList.add('hidden');
-    el.classList.remove('hidden');
-    el.className = 'attempt ' + (a.ok ? 'ok' : 'fail');
-    const lines = [
-      `${WBA.fmtTime(a.t)} ${a.trigger || ''} → ${a.ok ? 'OK' : 'NOT PLACED'} (${a.reason})`,
-      a.amountMinor != null ? `bid ${fmtMoney(a.amountMinor, cur)} / max ${fmtMoney(a.maxBidMinor, cur)}` : '',
-    ];
-    el.textContent = lines.filter(Boolean).join('\n');
+    el.innerHTML = '';
+    if (!a) return;
+    const head = document.createElement('div');
+    head.textContent = `${WBA.fmtTime(a.t)} ${a.shot || a.trigger || ''} → ${a.reason} ${a.amountMinor != null ? shortMoney(a.amountMinor, cur) : ''}`;
+    el.appendChild(head);
     if (a.checks) {
       const ul = document.createElement('ul');
       for (const c of a.checks) {
@@ -227,16 +355,16 @@
     out.innerHTML = '';
     if (!rows || !rows.length) return;
     const table = document.createElement('table');
-    table.className = 'fields';
+    table.className = 'grid';
     table.innerHTML =
-      '<tr><th>time</th><th>how</th><th>result</th><th>bid</th><th>est. left</th><th>server left</th><th>rtt</th><th>sched late</th></tr>';
+      '<tr><th>time</th><th>how</th><th>result</th><th>bid</th><th>est. left</th><th>server left</th><th>rtt</th><th>late</th></tr>';
     for (const a of rows) {
       const tr = document.createElement('tr');
       const vals = [
         WBA.fmtTime(a.t),
         `${a.shot || a.trigger}${a.dryRun ? ' (dry)' : ''}${a.suddenDeath ? ' SD' : ''}`,
         a.reason,
-        a.amountMinor != null ? fmtMoney(a.amountMinor, a.currency || cur) : '—',
+        a.amountMinor != null ? shortMoney(a.amountMinor, a.currency || cur) : '—',
         a.remainingMs != null ? `${a.remainingMs}ms` : '—',
         a.serverRemainingMs != null ? `${a.serverRemainingMs}ms` : '—',
         a.rttMs != null ? `${a.rttMs}ms` : '—',
@@ -259,52 +387,41 @@
 
   function renderDebug() {
     const t = $('debugTable');
-    if (!snap) return void (t.innerHTML = '');
+    if (!$('devTools').open) return; // only maintain the table while it is visible
     const s = snap.state;
     const cur = s.currency;
     const fs = s.fieldSources || {};
     const srcOf = (k) => (fs[k] ? `${fs[k].source} @ ${WBA.fmtTime(fs[k].t)}` : '—');
-    const a = snap.lastAttempt;
     const ck = snap.clock;
     const rows = [
+      ['Stream', snap.streamId],
       ['Page hook', snap.hookReady ? 'ready' : 'NOT DETECTED (reload tab)'],
       ['Auction ID', s.auctionId ?? '—'],
-      ['Auction status', s.status],
-      ['Active / ended', `${s.active} / ${s.ended}`],
-      ['Current price', `${fmtMoney(s.currentBidMinor, cur)}  (${srcOf('currentBidMinor')})`],
-      ['Next bid', `${fmtMoney(s.nextBidMinor, cur)}  (${srcOf('nextBidMinor')})`],
-      ['Maximum', fmtMoney(snap.settings.maxBidMinor, cur)],
-      ['Bids', `${s.bidCount ?? '—'}${s.highestBidder ? ' — high: ' + s.highestBidder : ''}`],
-      ['Sudden Death', `${s.suddenDeath}  (${srcOf('suddenDeath')})`],
-      ['Bump rule', s.bumpThresholdSeconds != null ? `bid with <${s.bumpThresholdSeconds}s left → ${s.bumpValueSeconds}s` : '—'],
-      ['End timestamp', s.endTime ? `${WBA.fmtTime(s.endTime)}  (${srcOf('endTime')})` : '—'],
-      ['End-time changes', String(Math.max(0, (s.endTimeHistory || []).length - 1))],
-      ['Remaining (calc)', s.endTime ? `${Math.round(s.endTime - serverNow())} ms` : '—'],
-      ['Last state update', s.lastUpdate ? WBA.fmtTime(s.lastUpdate) : '—'],
-      ['State sources', snap.sources.length ? snap.sources.join(', ') : 'none configured'],
+      ['Status', `${s.status} (active ${s.active}, ended ${s.ended})`],
+      ['Current', `${shortMoney(s.currentBidMinor, cur)} (${srcOf('currentBidMinor')})`],
+      ['Next', `${shortMoney(s.nextBidMinor, cur)} (${srcOf('nextBidMinor')})`],
+      ['High bidder', `${s.highestBidder ?? '—'} (${s.highestBidderId ?? '—'})`],
+      ['Sudden Death', `${s.suddenDeath} · extends ${s.endTimeExtends}`],
+      ['End time', s.endTime ? `${WBA.fmtTime(s.endTime)} · ${Math.max(0, (s.endTimeHistory || []).length - 1)} changes` : '—'],
+      ['Remaining', s.endTime ? `${Math.round(s.endTime - serverNow())} ms` : '—'],
+      ['Source alive', s.lastAlivePerf != null ? 'yes' : 'NO (stale)'],
       ...Object.entries(snap.sourceStats || {}).map(([name, st]) => [
-        `  ${name}`,
+        name,
         st
           ? `socket ${st.socketOpen ? 'open' : 'closed'} · ${st.frames} frames · last ${st.lastEvent || '—'}` +
-            `${st.lastLatencyMs != null ? ` · latency ~${st.lastLatencyMs}ms` : ''} · ignored ${st.ignored}`
+            `${st.lastLatencyMs != null ? ` · ~${st.lastLatencyMs}ms` : ''} · ignored ${st.ignored}` +
+            `${st.endLagsMs && st.endLagsMs.length ? ` · end lag ${st.endLagsMs.join(',')}ms` : ''}`
           : '—',
       ]),
-      ['Source alive', s.lastAlivePerf != null ? 'yes' : 'NO (stale)'],
-      ['Armed', snap.armed ? `yes — ${snap.armed.auctionId}` : 'no'],
-      ['Auto-bid mode', snap.armed ? `${snap.armed.mode} (armed)` : snap.settings.autoMode],
-      ['Target timing', `${snap.settings.targetMs} ms`],
-      ['Mode', snap.liveMode ? 'LIVE — real bids' : 'dry run'],
-      ['Our user id', snap.selfUserId ?? 'unknown (needed to avoid bidding against yourself)'],
-      ['Sniper plan', snap.plan ? `fire at ${WBA.fmtTime(snap.plan.endTime - snap.plan.targetMs)} (server)` : '—'],
+      ['Our user id', snap.selfUserId ?? 'unknown'],
+      ['Auto-bid', `${snap.armed ? `armed ${snap.armed.mode} on ${snap.armed.auctionId}` : 'not armed'} · ${snap.liveMode ? 'LIVE' : 'dry run'}`],
+      ['Plan', snap.plan ? `fire at ${WBA.fmtTime(snap.plan.endTime - snap.plan.targetMs)} (server)` : '—'],
       [
         'Clock offset',
         ck.samples
-          ? `${ck.offsetMs} ms ± ${ck.uncertaintyMs ?? '?'} (${ck.samples} samples, ${ck.sources.join('+')}, resets ${ck.resets}, rejected ${ck.rejected})`
-          : 'no samples yet (assuming 0)',
+          ? `${ck.offsetMs} ms ± ${ck.uncertaintyMs ?? '?'} (${ck.samples} samples: ${ck.sources.join('+')}; resets ${ck.resets}, rejected ${ck.rejected})`
+          : 'no samples yet',
       ],
-      ['DOM watch', snap.domWatch ? 'on' : 'off'],
-      ['Last bid attempt', a ? `${WBA.fmtTime(a.t)} ${a.trigger}` : '—'],
-      ['Last bid result', a ? `${a.ok ? 'OK' : 'NOT PLACED'} — ${a.reason}` : '—'],
     ];
     t.innerHTML = '';
     for (const [k, v] of rows) {
@@ -317,15 +434,47 @@
       t.appendChild(tr);
     }
   }
+  $('devTools').addEventListener('toggle', () => snap && snap.streamId && renderDebug());
 
-  // High-resolution remaining-time display against the server end time.
+  // ------------------------------------------------- countdown (per frame) --
+  // Anchored to the server end time via the clock offset; the progress bar is
+  // measured from when this panel first saw the auction's end time.
+  const seen = { id: null, start: 0 };
   function tick() {
     const s = snap && snap.state;
-    if (s && s.endTime != null) {
-      const ms = s.endTime - serverNow();
-      $('remaining').textContent = ms > 0 ? `${(ms / 1000).toFixed(3)} sec` : 'ended';
-      $('remaining').classList.toggle('urgent', ms > 0 && ms < 5000);
-    } else $('remaining').textContent = '—';
+    const main = $('timerMain');
+    const frac = $('timerFrac');
+    const timer = $('timer');
+    const bar = $('progressBar');
+    if (s && s.endTime != null && s.auctionId) {
+      const now = serverNow();
+      if (seen.id !== s.auctionId) {
+        seen.id = s.auctionId;
+        seen.start = Math.min(now, s.endTime);
+      }
+      const ms = s.endTime - now;
+      const total = Math.max(1, s.endTime - seen.start);
+      if (ms > 0 && !s.ended) {
+        const secs = Math.floor(ms / 1000);
+        main.textContent = secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : String(secs);
+        frac.textContent = secs >= 60 ? '' : `.${String(Math.floor(ms % 1000)).padStart(3, '0')}s`;
+        const urgent = ms < 3000;
+        timer.className = 'timer' + (urgent ? ' urgent' : '');
+        bar.className = 'progress-bar' + (urgent ? ' urgent' : '');
+        bar.style.width = `${Math.min(100, (ms / total) * 100)}%`;
+      } else {
+        // Whatnot announces the end ~1 s after the end time; until then it's closing.
+        main.textContent = s.ended ? 'Sold' : 'Closing…';
+        frac.textContent = '';
+        timer.className = s.ended ? 'timer done' : 'timer closing';
+        bar.style.width = '0%';
+      }
+    } else if (main) {
+      main.textContent = '--';
+      frac.textContent = '';
+      timer.className = 'timer done';
+      bar.style.width = '0%';
+    }
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
@@ -353,14 +502,21 @@
     }
   }
 
-  $('bidNow').addEventListener('click', (ev) =>
-    run(ev.target, async () => {
-      await request(M.BID_NOW, {
-        expectedAuctionId: snap && snap.state.auctionId,
-        expectedStreamId: snap && snap.streamId,
-      });
-    })
-  );
+  $('bidNow').addEventListener('click', async () => {
+    if (bidBusy || !snap) return;
+    bidBusy = true;
+    $('bidNow').disabled = true;
+    try {
+      const r = await request(M.BID_NOW, { expectedAuctionId: snap.state.auctionId, expectedStreamId: snap.streamId });
+      showBidResult(r);
+    } catch (e) {
+      showBidResult({ reason: 'EXCEPTION', error: e.message });
+    } finally {
+      bidBusy = false;
+      render();
+    }
+  });
+
   async function setLive(on) {
     try {
       await request(M.SET_LIVE, { on, confirmed: on });
@@ -369,15 +525,15 @@
     }
     render();
   }
-  $('dryRun').addEventListener('change', () => {
-    if ($('dryRun').checked) {
+  $('liveToggle').addEventListener('change', () => {
+    const toggle = $('liveToggle');
+    if (!toggle.checked) {
       $('liveConfirm').classList.add('hidden');
       return setLive(false);
     }
-    // Going live: keep the box ticked until explicitly confirmed.
-    $('dryRun').checked = true;
-    $('liveMax').textContent =
-      settings.maxBidMinor != null ? WBA.money.formatMoney(settings.maxBidMinor, snap && snap.state.currency) : 'NOT SET';
+    // Going live needs explicit confirmation; stay off until then.
+    toggle.checked = false;
+    $('liveMax').textContent = settings.maxBidMinor != null ? shortMoney(settings.maxBidMinor, snap && snap.state.currency) : 'your max (not set yet)';
     $('liveConfirm').classList.remove('hidden');
   });
   $('liveYes').addEventListener('click', () => {
@@ -386,7 +542,13 @@
   });
   $('liveNo').addEventListener('click', () => $('liveConfirm').classList.add('hidden'));
   $('arm').addEventListener('click', (ev) =>
-    run(ev.target, () => request(snap && snap.armed ? M.DISARM : M.ARM))
+    run(ev.target, async () => {
+      const r = await request(snap && snap.armed ? M.DISARM : M.ARM);
+      if (r && r.ok === false) {
+        const msg = { NO_MAX: 'Set a max bid first', NOT_ACTIVE: 'No live auction to arm on', NO_AUCTION: 'No live auction to arm on' }[r.reason];
+        $('autoStatus').textContent = msg || 'Could not arm';
+      }
+    })
   );
 
   $('recToggle').addEventListener('click', (ev) =>

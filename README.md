@@ -24,9 +24,13 @@ All modes stop at your maximum and never bid against you. Auto-bid needs a maxim
 **dry run by default**. Live auto-bidding must
 be confirmed in the side panel, and it switches off on every page reload or stream change.
 
-## Install (unpacked)
+## Install
 
-1. `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select this folder.
+1. Get the extension, either:
+   - this folder, or
+   - `npm run package` → unzip `dist/whatnot-bid-assistant-<version>.zip`.
+2. Go to `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and
+   select the folder.
 2. Open a Whatnot livestream, then click the extension icon. The side panel opens and stays
    open while you use the stream.
 3. After editing the code, click reload on the extension card **and** reload the Whatnot tab.
@@ -81,11 +85,21 @@ Design rules already enforced:
 - Live mode is in memory only and is cleared on reload or stream change.
 - `NO_REPLY` is reported as **outcome unknown**, never as "not placed".
 
+## Look and feel
+
+The side panel is styled to sit next to Whatnot's dark live view: near-black surfaces, a
+bright yellow primary action, pill shapes and a bold geometric typeface. The font is
+[Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans) (SIL OFL, bundled in
+`sidepanel/fonts`). To match Whatnot's exact typeface, change `--font` in
+`sidepanel/sidepanel.css`. The icon (`icons/icon.svg`) is the extension's own mark, not
+Whatnot's logo. Diagnostics live under the collapsed **Developer tools** section.
+
 ## Development
 
 ```
 npm test        # unit tests + replay of a sanitized real auction capture (tests/fixtures)
 npm run check   # syntax-check every JS file
+npm run package # build dist/whatnot-bid-assistant-<version>.zip
 ```
 
 ## Testing plan

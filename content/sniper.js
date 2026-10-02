@@ -200,7 +200,11 @@
       }
       if (wait <= 0) {
         // Armed (or extended) inside the window: fire now if the auction has not ended.
-        if (s.endTime - clock.serverNow() > 0) return fire();
+        if (s.endTime - clock.serverNow() > 0) {
+          log.info('already inside the bid window — firing now');
+          plan.firePerf = performance.now();
+          return fire();
+        }
         return cancel();
       }
       timer = setTimeout(startSpin, Math.max(0, wait - SPIN_MS));
