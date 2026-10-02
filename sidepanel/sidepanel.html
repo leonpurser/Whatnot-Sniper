@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Whatnot Bid Assistant</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header>
+      <h1>WHATNOT BID ASSISTANT</h1>
+      <div id="conn" class="pill off">not connected</div>
+    </header>
+
+    <section class="card" id="auction">
+      <div class="row"><span class="k">Stream</span><span class="v mono" id="streamId">—</span></div>
+      <div class="row"><span class="k">Item</span><span class="v" id="itemName">—</span></div>
+      <div class="row"><span class="k">Current</span><span class="v big" id="current">—</span></div>
+      <div class="row"><span class="k">Next bid</span><span class="v" id="next">—</span></div>
+      <div class="row">
+        <label class="k" for="maxBid">Maximum</label>
+        <input id="maxBid" type="text" inputmode="decimal" placeholder="e.g. 30" autocomplete="off" />
+      </div>
+      <div class="row"><span class="k">Auction</span><span class="v" id="type">—</span></div>
+      <div class="row"><span class="k">Remaining</span><span class="v big mono" id="remaining">—</span></div>
+      <div class="row">
+        <label class="k" for="targetMs">Bid timing</label>
+        <span><input id="targetMs" type="number" min="50" max="10000" step="10" /> ms before end</span>
+      </div>
+      <div class="row">
+        <label class="k" for="dryRun">Dry run</label>
+        <span><input id="dryRun" type="checkbox" checked disabled /> <small>forced on — no real executor yet</small></span>
+      </div>
+      <div class="buttons">
+        <button id="bidNow" class="danger">BID NOW</button>
+        <button id="arm">ARM AUTO BID</button>
+      </div>
+      <div class="row"><span class="k">Status</span><span class="v" id="status">—</span></div>
+      <div id="lastAttempt" class="attempt hidden"></div>
+      <p class="note" id="noSources">
+        No auction-state sources are configured yet. Use the inspector below during a live auction to find where
+        Whatnot's auction data comes from (see docs/INSPECTION.md).
+      </p>
+    </section>
+
+    <details id="debug" open>
+      <summary>Debug</summary>
+      <table class="kv" id="debugTable"></table>
+    </details>
+
+    <details id="inspector" open>
+      <summary>Inspector</summary>
+
+      <div class="toolbar">
+        <button id="recToggle">Pause recording</button>
+        <button id="clearCap">Clear</button>
+        <button id="exportCap">Export capture (.json)</button>
+      </div>
+      <div class="toolbar">
+        <input id="markerLabel" type="text" placeholder="marker label, e.g. 'new item started'" />
+        <button id="addMarker">Mark</button>
+      </div>
+      <div id="capStats" class="mono small"></div>
+
+      <h3>Find value in captured traffic</h3>
+      <div class="toolbar">
+        <input id="searchNeedle" type="text" placeholder="e.g. £18 or item name" />
+        <button id="searchBtn">Find</button>
+      </div>
+      <div id="searchOut" class="out"></div>
+
+      <h3>Field discovery <small>(auction-like JSON keys seen in traffic)</small></h3>
+      <div class="toolbar">
+        <input id="fieldFilter" type="text" placeholder="filter path/source, e.g. endTime" />
+        <button id="fieldsBtn">Refresh</button>
+      </div>
+      <div id="fieldsOut" class="out"></div>
+
+      <h3>Page probes</h3>
+      <div class="toolbar">
+        <button id="pickBtn">Pick element</button>
+        <button id="domScanBtn">DOM scan</button>
+        <button id="reactBtn">React probe</button>
+        <button id="globalsBtn">Globals probe</button>
+      </div>
+      <div class="toolbar">
+        <input id="reactSelector" type="text" placeholder="optional CSS selector for React probe" />
+      </div>
+      <div class="toolbar">
+        <button id="copyProbe">Copy result</button>
+      </div>
+      <pre id="probeOut" class="out"></pre>
+    </details>
+
+    <details id="logBox" open>
+      <summary>Event log</summary>
+      <div id="log" class="log mono"></div>
+    </details>
+
+    <script src="../shared/constants.js"></script>
+    <script src="../shared/log.js"></script>
+    <script src="../shared/money.js"></script>
+    <script src="../shared/state.js"></script>
+    <script src="../shared/messages.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

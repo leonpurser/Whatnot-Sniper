@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Whatnot Bid Assistant",
+  "version": "0.1.0",
+  "description": "Auction-state inspector and (later) bidding assistant for Whatnot livestreams.",
+  "minimum_chrome_version": "116",
+  "permissions": ["sidePanel", "storage"],
+  "host_permissions": ["https://www.whatnot.com/*", "https://whatnot.com/*"],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_title": "Whatnot Bid Assistant"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.whatnot.com/*", "https://whatnot.com/*"],
+      "js": ["page/page-hook.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://www.whatnot.com/*", "https://whatnot.com/*"],
+      "js": [
+        "shared/constants.js",
+        "shared/log.js",
+        "shared/money.js",
+        "shared/state.js",
+        "shared/safety.js",
+        "shared/discovery.js",
+        "shared/messages.js",
+        "content/page-bridge.js",
+        "content/clock.js",
+        "content/capture-store.js",
+        "content/stream-detector.js",
+        "content/dom-probe.js",
+        "content/auction-state.js",
+        "content/sources/registry.js",
+        "content/bid-executor.js",
+        "content/sniper.js",
+        "content/whatnot.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}
