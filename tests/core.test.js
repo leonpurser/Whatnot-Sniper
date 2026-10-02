@@ -42,6 +42,13 @@ function goodCtx(over = {}) {
   };
 }
 
+test('validateBid without enforceMax skips only the max checks', () => {
+  const v = WBA.safety.validateBid(goodCtx({ maxBidMinor: null, enforceMax: false }));
+  assert.equal(v.ok, true);
+  assert.ok(!v.checks.some((c) => c.name.includes('max')));
+  assert.equal(WBA.safety.validateBid(goodCtx({ maxBidMinor: null, enforceMax: false, state: { auctionId: 'B' } })).ok, false);
+});
+
 test('validateBid passes when everything is verified', () => {
   const v = WBA.safety.validateBid(goodCtx());
   assert.equal(v.ok, true, JSON.stringify(v.checks.filter((c) => !c.ok)));
@@ -174,20 +181,39 @@ function makeExecutor(stateOver = {}, ctxOver = {}, sendBid) {
   return { ex, log, sent, state };
 }
 const BID = { trigger: 'manual', expectedStreamId: 'S1' };
+const AUTO = { trigger: 'auto', expectedStreamId: 'S1', targetMs: 500 };
+const ARMED = { armed: true, armedAuctionId: 'A1' };
 const okReply = (state) => ({
   sent: true,
   send: { t: Date.now(), p: performance.now() },
   reply: { t: Date.now() + 100, p: performance.now() + 100, status: 'ok', response: { serverTimestamps: { accepted: state.endTime - 4321, responded: state.endTime - 4300 } } },
 });
 
-test('executor dry-run logs WOULD BID, sends nothing and blocks duplicates', async () => {
-  const { ex, log, sent } = makeExecutor();
-  const r1 = await ex.placeBid('A1', 3000, BID);
+test('auto-bid dry-run logs WOULD BID, sends nothing and blocks duplicates', async () => {
+  const { ex, log, sent } = makeExecutor({}, ARMED);
+  const r1 = await ex.placeBid('A1', 3000, AUTO);
   assert.equal(r1.ok, true);
   assert.equal(r1.reason, 'DRY_RUN');
   assert.equal(sent.length, 0);
   assert.ok(log.entries().some((e) => e.msg.includes('WOULD BID auction=A1')));
-  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'DUPLICATE');
+  assert.equal((await ex.placeBid('A1', 3000, AUTO)).reason, 'DUPLICATE');
+});
+
+test('manual BID NOW is always real and needs no maximum', async () => {
+  // Context says dry run and no max is set: a manual click still bids, like Whatnot's button.
+  const { ex, sent } = makeExecutor({}, { dryRun: true }, (args, state) => okReply(state));
+  const r = await ex.placeBid('A1', null, BID);
+  assert.equal(r.reason, 'ACCEPTED');
+  assert.equal(r.dryRun, false);
+  assert.deepEqual(sent, [{ auctionId: 'A1', amountMinor: 2300, currency: 'GBP' }]);
+  assert.ok(!r.checks.some((c) => c.name === 'max-set' || c.name === 'within-max'));
+});
+
+test('auto-bid needs the sniper armed and a maximum', async () => {
+  let { ex } = makeExecutor({}, { dryRun: false });
+  assert.ok((await ex.placeBid('A1', 3000, AUTO)).failed.includes('armed'));
+  ({ ex } = makeExecutor({}, { ...ARMED, dryRun: false }));
+  assert.ok((await ex.placeBid('A1', null, AUTO)).failed.includes('max-set'));
 });
 
 test('executor live bid: sends exact next amount and records server timing', async () => {
@@ -220,9 +246,9 @@ test('executor lock rejects concurrent bids', async () => {
 });
 
 test('executor aborts on wrong auction, over max or when already winning', async () => {
-  let { ex, sent } = makeExecutor({}, { dryRun: false });
+  let { ex, sent } = makeExecutor({}, { ...ARMED, dryRun: false });
   assert.equal((await ex.placeBid('OTHER', 3000, BID)).reason, 'VALIDATION_FAILED');
-  const over = await ex.placeBid('A1', 2000, BID);
+  const over = await ex.placeBid('A1', 2000, AUTO);
   assert.ok(over.failed.includes('within-max'));
   ({ ex, sent } = makeExecutor({ highestBidderId: '1' }, { dryRun: false }));
   const mine = await ex.placeBid('A1', 3000, BID);
@@ -304,11 +330,11 @@ test('a dry run does not block the live bid that follows it', async () => {
   const sent = [];
   const ex = WBA.createBidExecutor({
     log: quietLog(),
-    getContext: () => ({ state, streamId: 'S1', serverNow: () => Date.now(), staleMs: 3000, selfUserId: '1', dryRun: mode.dryRun }),
+    getContext: () => ({ state, streamId: 'S1', serverNow: () => Date.now(), staleMs: 3000, selfUserId: '1', dryRun: mode.dryRun, ...ARMED }),
     sendBid: async (a) => (sent.push(a), okReply(state)),
   });
-  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'DRY_RUN');
+  assert.equal((await ex.placeBid('A1', 3000, AUTO)).reason, 'DRY_RUN');
   mode.dryRun = false;
-  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'ACCEPTED');
+  assert.equal((await ex.placeBid('A1', 3000, AUTO)).reason, 'ACCEPTED');
   assert.equal(sent.length, 1);
 });

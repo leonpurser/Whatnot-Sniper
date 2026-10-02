@@ -157,8 +157,10 @@
     $('noSources').classList.toggle('hidden', !!(snap && snap.sources && snap.sources.length));
     const live = !!(snap && snap.liveMode);
     $('dryRun').checked = !live;
-    $('modeNote').textContent = live ? 'LIVE — bids are placed for real' : 'no real bids are sent';
-    $('bidNow').textContent = live ? 'BID NOW (LIVE)' : 'BID NOW (dry run)';
+    $('modeNote').textContent = live ? 'LIVE — the sniper places real bids' : 'sniper sends nothing';
+    const canBid = s && s.active && Number.isInteger(s.nextBidMinor);
+    $('bidNow').textContent = canBid ? `BID ${fmtMoney(s.nextBidMinor, cur)}` : 'BID';
+    $('bidNow').disabled = !canBid;
     $('arm').textContent = armed ? 'DISARM' : live ? 'ARM AUTO BID (LIVE)' : 'ARM AUTO BID (dry run)';
     document.body.classList.toggle('live', live);
     renderHistory(snap && snap.history, cur);

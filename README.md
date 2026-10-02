@@ -8,8 +8,12 @@ Whatnot's auction WebSocket. Bids are sent exactly as the page sends them: a `pl
 push on the page's own socket. The sniper fires at a configurable time before the server
 end time. See [docs/FINDINGS.md](docs/FINDINGS.md).
 
-**Dry run is the default.** Live bidding must be confirmed in the side panel each time,
-and it switches off on every page reload or stream change.
+**BID button**: works like Whatnot's own bid button. One click places a real bid at the
+next amount, with no maximum needed. The safety checks still apply: right auction, still
+active, exact next price, and never bidding against yourself.
+
+**Auto-bid (sniper)**: needs a maximum and is **dry run by default**. Live auto-bidding must
+be confirmed in the side panel, and it switches off on every page reload or stream change.
 
 ## Install (unpacked)
 
@@ -80,7 +84,7 @@ npm run check   # syntax-check every JS file
 1. **Dry runs.** Arm several auctions in dry run (normal and Sudden Death) at different
    targets. The "Bid attempts & timing" table shows how far before the end each shot
    would have fired, and how late the scheduler was.
-2. **Manual live bids.** On cheap items, check that BID NOW is accepted and note
+2. **Manual bids.** On cheap items, check that the BID button is accepted and note
    `server left` and `rtt`.
 3. **Live sniping on Sudden Death.** Start conservatively (1000 ms) and step down
    (750 → 500 → 350 → 250), recording which bids are accepted. `server left` is exact:

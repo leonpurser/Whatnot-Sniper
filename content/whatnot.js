@@ -125,7 +125,7 @@
   WBA.createStreamDetector({
     pattern: C.STREAM_PATH_PATTERN,
     onChange(id) {
-      if (liveMode) log.info('stream changed — back to DRY RUN');
+      if (liveMode) log.info('stream changed — auto-bid back to DRY RUN');
       liveMode = false;
       store.setStream(id);
       applyDomWatch();
@@ -218,7 +218,8 @@
       const page = await bridge.request('bid-diagnostics', { topic: `commerce:${store.getStreamId()}` });
       const s = store.get();
       return {
-        mode: liveMode ? 'LIVE' : 'DRY RUN (nothing is sent to Whatnot)',
+        bidNow: 'always real (like Whatnot\'s bid button)',
+        autoBid: liveMode ? 'LIVE' : 'DRY RUN (the sniper sends nothing to Whatnot)',
         pageHook: page,
         selfUserId: selfUserId(),
         maxBid: settings.maxBidMinor,
@@ -229,13 +230,13 @@
     [M.SET_LIVE]: ({ on, confirmed }) => {
       if (on && confirmed !== true) throw new Error('live mode needs confirmation');
       liveMode = !!on;
-      log.warn(liveMode ? 'LIVE BIDDING ENABLED — bids will be placed for real' : 'back to DRY RUN');
+      log.warn(liveMode ? 'auto-bid LIVE — the sniper will place real bids' : 'auto-bid back to DRY RUN');
       schedulePush();
       return { liveMode };
     },
     [M.BID_NOW]: async ({ expectedAuctionId, expectedStreamId }) => {
       try {
-        return await executor.placeBid(expectedAuctionId || null, settings.maxBidMinor, {
+        return await executor.placeBid(expectedAuctionId || null, null, {
           trigger: 'manual',
           expectedStreamId: expectedStreamId || null,
         });

@@ -19,6 +19,8 @@
    * @param {boolean} ctx.armed
    * @param {string|null} ctx.armedAuctionId
    * @param {string|null} ctx.selfUserId  our Whatnot user id (to avoid bidding against ourselves)
+   * @param {boolean} [ctx.enforceMax=true] false for a manual BID NOW, which (like Whatnot's
+   *        own bid button) bids the next amount without a user maximum
    */
   function validateBid(ctx) {
     const s = ctx.state || {};
@@ -72,9 +74,11 @@
       noBids ? 'no bids yet' : `high=${s.highestBidderId} self=${ctx.selfUserId ?? 'unknown'}`
     );
 
-    const max = ctx.maxBidMinor;
-    add('max-set', Number.isInteger(max) && max > 0, `max=${max}`);
-    add('within-max', required != null && Number.isInteger(max) && required <= max, `required=${required} max=${max}`);
+    if (ctx.enforceMax !== false) {
+      const max = ctx.maxBidMinor;
+      add('max-set', Number.isInteger(max) && max > 0, `max=${max}`);
+      add('within-max', required != null && Number.isInteger(max) && required <= max, `required=${required} max=${max}`);
+    }
 
     const remaining = s.endTime == null || ctx.serverNowMs == null ? null : s.endTime - ctx.serverNowMs;
     add('end-time-known', s.endTime != null, `endTime=${s.endTime}`);

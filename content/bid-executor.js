@@ -2,6 +2,12 @@
 // bid is physically executed is the injected sendBid() (today: the page hook's
 // place_bid push on Whatnot's own auction socket — see page/page-hook.js).
 //
+// Two kinds of bid:
+//   manual (BID NOW)  behaves like Whatnot's own bid button: always real, bids the
+//                     next amount, no user maximum.
+//   auto (sniper)     needs the sniper armed on this auction, enforces the user
+//                     maximum, and is dry-run unless live mode is on.
+//
 // Order of operations for every bid:
 //   lock → validate every safety check → dedupe → dry-run? log : sendBid
 //   → (page hook re-checks auction id / active / exact next price at send time)
@@ -18,7 +24,7 @@
 
     /**
      * @param {string} expectedAuctionId
-     * @param {number} maxBidMinor
+     * @param {number|null} maxBidMinor  required for auto bids, ignored for manual ones
      * @param {{ trigger: 'manual'|'auto', expectedStreamId: string, targetMs?: number, plannedLateMs?: number }} opts
      */
     async function placeBid(expectedAuctionId, maxBidMinor, opts = {}) {
@@ -29,7 +35,12 @@
       }
       bidInProgress = true;
       try {
-        const ctx = getContext();
+        const auto = trigger === 'auto';
+        const ctx = { ...getContext() };
+        if (!auto) {
+          ctx.dryRun = false; // a manual click is a real bid, exactly like Whatnot's button
+          maxBidMinor = null;
+        }
         const tValidate = performance.now();
         const serverNow = ctx.serverNow();
         const v = WBA.safety.validateBid({
@@ -41,7 +52,8 @@
           serverNowMs: serverNow,
           nowPerf: tValidate,
           staleMs: ctx.staleMs,
-          requireArmed: trigger === 'auto',
+          requireArmed: auto,
+          enforceMax: auto,
           armed: ctx.armed,
           armedAuctionId: ctx.armedAuctionId,
           selfUserId: ctx.selfUserId,
