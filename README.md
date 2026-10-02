@@ -1,0 +1,2 @@
+# Whatnot-Sniper
+Chrome extension
