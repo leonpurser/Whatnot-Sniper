@@ -20,11 +20,24 @@
         <label class="k" for="maxBid">Auto-bid max</label>
         <input id="maxBid" type="text" inputmode="decimal" placeholder="e.g. 30" autocomplete="off" />
       </div>
+      <div class="row">
+        <label class="k" for="autoMode">Auto-bid mode</label>
+        <select id="autoMode">
+          <option value="snipe">Snipe at the end</option>
+          <option value="snipe-rebid">Snipe + re-bid if outbid</option>
+          <option value="keep-winning">Keep me winning</option>
+        </select>
+      </div>
+      <p class="note" id="modeHelp"></p>
       <div class="row"><span class="k">Auction</span><span class="v" id="type">—</span></div>
       <div class="row"><span class="k">Remaining</span><span class="v big mono" id="remaining">—</span></div>
-      <div class="row">
+      <div class="row" id="timingRow">
         <label class="k" for="targetMs">Bid timing</label>
         <span><input id="targetMs" type="number" min="50" max="10000" step="10" /> ms before end</span>
+      </div>
+      <div class="row" id="rebidRow">
+        <label class="k" for="minRebidMs">Re-bid only if</label>
+        <span>≥ <input id="minRebidMs" type="number" min="0" max="5000" step="10" /> ms left</span>
       </div>
       <div class="row">
         <label class="k" for="dryRun">Auto-bid dry run</label>

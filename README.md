@@ -12,7 +12,16 @@ end time. See [docs/FINDINGS.md](docs/FINDINGS.md).
 next amount, with no maximum needed. The safety checks still apply: right auction, still
 active, exact next price, and never bidding against yourself.
 
-**Auto-bid (sniper)**: needs a maximum and is **dry run by default**. Live auto-bidding must
+**Auto-bid**: three selectable modes:
+- **Snipe at the end**: one bid at the chosen time before the end. Normal auctions re-snipe
+  automatically when outbid, because their timer resets.
+- **Snipe + re-bid if outbid** (default): as above. If someone outbids you after your snipe
+  with at least *N* ms still left, it bids again straight away. This matters for Sudden
+  Death, where the end never moves.
+- **Keep me winning**: bids whenever you are not the highest bidder, at any time.
+
+All modes stop at your maximum and never bid against you. Auto-bid needs a maximum and is
+**dry run by default**. Live auto-bidding must
 be confirmed in the side panel, and it switches off on every page reload or stream change.
 
 ## Install (unpacked)

@@ -278,3 +278,11 @@ body.live .card {
 .confirm p {
   margin: 4px 0;
 }
+select {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font: inherit;
+}

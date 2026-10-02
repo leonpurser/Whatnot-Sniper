@@ -61,6 +61,7 @@
         const s = ctx.state;
         const base = {
           trigger,
+          shot: opts.shot || null,
           expectedAuctionId,
           suddenDeath: s.suddenDeath,
           amountMinor: v.bidAmountMinor,

@@ -28,6 +28,8 @@
     DEFAULT_SETTINGS: Object.freeze({
       maxBidMinor: null, // user maximum, integer minor units (pence/cents)
       targetMs: 500, // sniper trigger offset before server end time
+      autoMode: 'snipe-rebid', // 'snipe' | 'snipe-rebid' | 'keep-winning' (see content/sniper.js)
+      minRebidMs: 150, // snipe-rebid: don't re-bid with less than this left
       keepArmedAcrossAuctions: false,
       domWatch: true, // record price/timer DOM mutations into the capture timeline
     }),

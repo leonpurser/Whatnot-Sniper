@@ -114,6 +114,29 @@
     settings = { ...C.DEFAULT_SETTINGS, ...(s || {}) };
     $('maxBid').value = settings.maxBidMinor != null ? (settings.maxBidMinor / 100).toString() : '';
     $('targetMs').value = settings.targetMs;
+    $('minRebidMs').value = settings.minRebidMs;
+    $('autoMode').value = settings.autoMode;
+    renderModeHelp();
+  });
+  const MODE_HELP = {
+    snipe: 'One bid at the chosen time before the end. Normal auctions re-snipe automatically when outbid (their timer resets).',
+    'snipe-rebid': 'Snipes at the end; if someone outbids you after that and enough time is left, bids again straight away (key for Sudden Death).',
+    'keep-winning': 'Bids as soon as you are not the highest bidder, at any time, until your maximum.',
+  };
+  function renderModeHelp() {
+    const m = $('autoMode').value;
+    $('modeHelp').textContent = MODE_HELP[m] || '';
+    $('timingRow').classList.toggle('hidden', m === 'keep-winning');
+    $('rebidRow').classList.toggle('hidden', m !== 'snipe-rebid');
+  }
+  $('autoMode').addEventListener('change', () => {
+    renderModeHelp();
+    saveSettings({ autoMode: $('autoMode').value });
+  });
+  $('minRebidMs').addEventListener('change', () => {
+    const v = Math.min(5000, Math.max(0, Math.round(Number($('minRebidMs').value)) || 0));
+    $('minRebidMs').value = v;
+    saveSettings({ minRebidMs: v });
   });
   function saveSettings(patch) {
     settings = { ...settings, ...patch };
@@ -211,7 +234,7 @@
       const tr = document.createElement('tr');
       const vals = [
         WBA.fmtTime(a.t),
-        `${a.trigger}${a.dryRun ? ' (dry)' : ''}${a.suddenDeath ? ' SD' : ''}`,
+        `${a.shot || a.trigger}${a.dryRun ? ' (dry)' : ''}${a.suddenDeath ? ' SD' : ''}`,
         a.reason,
         a.amountMinor != null ? fmtMoney(a.amountMinor, a.currency || cur) : '—',
         a.remainingMs != null ? `${a.remainingMs}ms` : '—',
@@ -268,6 +291,7 @@
       ]),
       ['Source alive', s.lastAlivePerf != null ? 'yes' : 'NO (stale)'],
       ['Armed', snap.armed ? `yes — ${snap.armed.auctionId}` : 'no'],
+      ['Auto-bid mode', snap.armed ? `${snap.armed.mode} (armed)` : snap.settings.autoMode],
       ['Target timing', `${snap.settings.targetMs} ms`],
       ['Mode', snap.liveMode ? 'LIVE — real bids' : 'dry run'],
       ['Our user id', snap.selfUserId ?? 'unknown (needed to avoid bidding against yourself)'],

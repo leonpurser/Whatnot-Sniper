@@ -338,3 +338,80 @@ test('a dry run does not block the live bid that follows it', async () => {
   assert.equal((await ex.placeBid('A1', 3000, AUTO)).reason, 'ACCEPTED');
   assert.equal(sent.length, 1);
 });
+
+// ---- auto-bid modes -------------------------------------------------------
+function modeRig(mode, extra = {}) {
+  const log = quietLog();
+  const store = WBA.createAuctionStateStore({ log });
+  store.setStream('S1');
+  const settings = { ...WBA.constants.DEFAULT_SETTINGS, maxBidMinor: 1000, targetMs: 100, autoMode: mode, minRebidMs: 30, ...extra };
+  const calls = [];
+  const executor = {
+    placeBid: async (id, max, opts) => {
+      const s = store.get();
+      calls.push({ shot: opts.shot, amount: s.nextBidMinor, remaining: s.endTime - Date.now() });
+      // Simulate Whatnot accepting our bid.
+      store.update({ auctionId: id, currentBidMinor: s.nextBidMinor, nextBidMinor: s.nextBidMinor + 100, bidCount: s.bidCount + 1, highestBidderId: 'me' }, 'sim');
+      return { ok: true };
+    },
+  };
+  const sniper = WBA.createSniper({ log, store, getSettings: () => settings, executor, clock: WBA.createClock(), getSelfUserId: () => 'me' });
+  const otherBids = (amount) =>
+    store.update({ auctionId: 'A', currentBidMinor: amount, nextBidMinor: amount + 100, bidCount: store.get().bidCount + 1, highestBidderId: 'them' }, 'sim');
+  return { store, settings, calls, sniper, otherBids, log };
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+test('keep-winning: bids whenever outbid, never against itself, stops at max', async () => {
+  const { store, calls, sniper, otherBids } = modeRig('keep-winning');
+  store.update({ auctionId: 'A', active: true, endTime: Date.now() + 60000, currentBidMinor: 0, nextBidMinor: 100, bidCount: 0 }, 't');
+  sniper.arm();
+  await sleep(5);
+  assert.deepEqual(calls.map((c) => c.amount), [100], 'opening bid straight away');
+  otherBids(200);
+  await sleep(5);
+  otherBids(400);
+  await sleep(5);
+  assert.deepEqual(calls.map((c) => c.amount), [100, 300, 500]);
+  assert.ok(calls.every((c) => c.shot === 'keep-winning'));
+  otherBids(1000); // next would be 1100 > max 1000
+  await sleep(5);
+  assert.equal(calls.length, 3, 'stops at the maximum');
+  assert.equal(sniper.plan, null, 'no end-time shot in keep-winning');
+  sniper.disarm('test');
+});
+
+test('snipe-rebid: one snipe, then re-bids if outbid inside the window (Sudden Death)', async () => {
+  const { store, calls, sniper, otherBids } = modeRig('snipe-rebid', { targetMs: 150 });
+  store.update({ auctionId: 'A', active: true, suddenDeath: true, endTime: Date.now() + 300, currentBidMinor: 200, nextBidMinor: 300, bidCount: 2, highestBidderId: 'them' }, 't');
+  sniper.arm();
+  await sleep(10);
+  assert.equal(calls.length, 0, 'waits for the snipe window');
+  await sleep(170); // snipe at T-150
+  assert.deepEqual(calls.map((c) => c.shot), ['snipe']);
+  otherBids(400); // outbid with ~110 ms left (> minRebid 30)
+  await sleep(5);
+  assert.deepEqual(calls.map((c) => [c.shot, c.amount]), [['snipe', 300], ['rebid', 500]]);
+  sniper.disarm('test');
+});
+
+test('snipe (plain): no re-bid when outbid after the snipe', async () => {
+  const { store, calls, sniper, otherBids } = modeRig('snipe', { targetMs: 150 });
+  store.update({ auctionId: 'A', active: true, suddenDeath: true, endTime: Date.now() + 250, currentBidMinor: 200, nextBidMinor: 300, bidCount: 2, highestBidderId: 'them' }, 't');
+  sniper.arm();
+  await sleep(140);
+  assert.equal(calls.length, 1);
+  otherBids(400);
+  await sleep(10);
+  assert.equal(calls.length, 1);
+  sniper.disarm('test');
+});
+
+test('snipe: already winning at the end means no bid', async () => {
+  const { store, calls, sniper } = modeRig('snipe', { targetMs: 50 });
+  store.update({ auctionId: 'A', active: true, endTime: Date.now() + 120, currentBidMinor: 200, nextBidMinor: 300, bidCount: 2, highestBidderId: 'me' }, 't');
+  sniper.arm();
+  await sleep(110);
+  assert.equal(calls.length, 0);
+  sniper.disarm('test');
+});

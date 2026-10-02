@@ -88,7 +88,7 @@
         state[k] = v;
         state.fieldSources[k] = { source, t };
         changed = true;
-        logChange(k, old, v, source);
+        logChange(k, old, v, source, partial);
         if (k === 'endTime') {
           state.endTimeHistory.push({ t, endTime: v, source });
           if (state.endTimeHistory.length > 50) state.endTimeHistory.shift();
@@ -122,11 +122,12 @@
       'endTimeExtends',
     ]);
 
-    function logChange(k, old, v, source) {
+    function logChange(k, old, v, source, partial) {
       if (QUIET_FIELDS.has(k)) return;
       const tag = `[${source}]`;
       if (k === 'currentBidMinor') {
-        const who = state.highestBidder ? ` by ${state.highestBidder}` : '';
+        const bidder = partial.highestBidder !== undefined ? partial.highestBidder : state.highestBidder;
+        const who = bidder ? ` by ${bidder}` : '';
         log.info(`bid update ${fmtMoney(old)} -> ${fmtMoney(v)}${who} ${tag}`);
       }
       else if (k === 'nextBidMinor') log.info(`next bid ${fmtMoney(v)} ${tag}`);

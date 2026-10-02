@@ -53,7 +53,7 @@
         8000
       ),
   });
-  sniper = WBA.createSniper({ log, store, getSettings: () => settings, executor, clock, isLive: () => liveMode, onChange: () => schedulePush() });
+  sniper = WBA.createSniper({ log, store, getSettings: () => settings, executor, clock, getSelfUserId: selfUserId, isLive: () => liveMode, onChange: () => schedulePush() });
 
   // ------------------------------------------------------------ settings --
   chrome.storage.local.get('settings').then(({ settings: s }) => {
