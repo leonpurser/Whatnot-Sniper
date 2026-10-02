@@ -1,0 +1,279 @@
+{
+"note": "Sanitized subset of a real capture (2 normal auctions + start of a 3rd). Usernames/tokens removed.",
+"streamId": "95532af6-c616-44b3-9938-69fd0d9fffd0",
+"entries": [
+{
+"kind": "ws-in",
+"t": 1790959752382,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", \"19\", \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"phx_reply\", {\"status\": \"ok\", \"response\": {\"cf_ray\": \"a44531f7df1663d6-LHR\", \"serverTimestamps\": {\"accepted\": 1790959752177, \"responded\": 1790959752346}}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959752548,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"user_joined\", {\"pinnedProduct\": {\"id\": \"a1ae47a5-50f1-4067-a0f9-31060f8e2533\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #22\", \"isAuctionActive\": false, \"auctionEndTime\": 1790959732454, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2400, \"price\": {\"amount\": 2400, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2600, \"currency\": \"GBP\"}, \"nextBidCents\": 2600, \"bidCount\": 20, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"SOLD\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959753177,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"auction_started\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": null, \"nextBidPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"nextBidCents\": 100, \"bidCount\": 0, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true}, \"timestamp\": 1790959752999}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959753290,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"product_updated\", {\"product\": {\"id\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"parentId\": null, \"name\": \"1. ITEM ON SCREEN. Listen to sizes\", \"isAuctionActive\": false, \"auctionEndTime\": null, \"isSuddenDeath\": false, \"highestBid\": null, \"nextBidPrice\": null, \"nextBidCents\": null, \"bidCount\": 0, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": null, \"bumpValueSeconds\": null, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": null}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959753393,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, \"20\", \"phoenix\", \"phx_reply\", {\"status\": \"ok\", \"response\": {}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959754387,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 100, \"price\": {\"amount\": 100, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 200, \"currency\": \"GBP\"}, \"nextBidCents\": 200, \"bidCount\": 1, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959754341, \"highestBidder\": {\"username\": \"bidder5\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959755479,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 200, \"price\": {\"amount\": 200, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 300, \"currency\": \"GBP\"}, \"nextBidCents\": 300, \"bidCount\": 2, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959755441, \"highestBidder\": {\"username\": \"bidder6\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959755921,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 300, \"price\": {\"amount\": 300, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 400, \"currency\": \"GBP\"}, \"nextBidCents\": 400, \"bidCount\": 3, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959755882, \"highestBidder\": {\"username\": \"bidder7\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959756741,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 400, \"price\": {\"amount\": 400, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 500, \"currency\": \"GBP\"}, \"nextBidCents\": 500, \"bidCount\": 4, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959756701, \"highestBidder\": {\"username\": \"bidder8\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959758509,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 600, \"price\": {\"amount\": 600, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 700, \"currency\": \"GBP\"}, \"nextBidCents\": 700, \"bidCount\": 6, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959758410, \"highestBidder\": {\"username\": \"bidder9\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959758838,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 800, \"price\": {\"amount\": 800, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 900, \"currency\": \"GBP\"}, \"nextBidCents\": 900, \"bidCount\": 8, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959758801, \"highestBidder\": {\"username\": \"bidder10\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959759381,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 1000, \"price\": {\"amount\": 1000, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 1100, \"currency\": \"GBP\"}, \"nextBidCents\": 1100, \"bidCount\": 10, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959759346, \"highestBidder\": {\"username\": \"bidder11\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959759831,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 1200, \"price\": {\"amount\": 1200, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 1400, \"currency\": \"GBP\"}, \"nextBidCents\": 1400, \"bidCount\": 12, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959759794, \"highestBidder\": {\"username\": \"bidder12\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959760243,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 1500, \"price\": {\"amount\": 1500, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 1700, \"currency\": \"GBP\"}, \"nextBidCents\": 1700, \"bidCount\": 14, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959760208, \"highestBidder\": {\"username\": \"bidder13\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959760935,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767928, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 1800, \"price\": {\"amount\": 1800, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2000, \"currency\": \"GBP\"}, \"nextBidCents\": 2000, \"bidCount\": 16, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959760899, \"highestBidder\": {\"username\": \"bidder14\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959761008,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959767962, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2000, \"price\": {\"amount\": 2000, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2200, \"currency\": \"GBP\"}, \"nextBidCents\": 2200, \"bidCount\": 18, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959760973, \"highestBidder\": {\"username\": \"bidder15\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959761655,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959768607, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2200, \"price\": {\"amount\": 2200, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2400, \"currency\": \"GBP\"}, \"nextBidCents\": 2400, \"bidCount\": 19, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959761619, \"highestBidder\": {\"username\": \"bidder16\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959762179,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959769117, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2400, \"price\": {\"amount\": 2400, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2600, \"currency\": \"GBP\"}, \"nextBidCents\": 2600, \"bidCount\": 20, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959762129, \"highestBidder\": {\"username\": \"bidder17\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959763484,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, \"21\", \"phoenix\", \"phx_reply\", {\"status\": \"ok\", \"response\": {}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959766124,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959773073, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2600, \"price\": {\"amount\": 2600, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 3000, \"currency\": \"GBP\"}, \"nextBidCents\": 3000, \"bidCount\": 21, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959766086, \"highestBidder\": {\"username\": \"bidder19\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959766458,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", \"22\", \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"phx_reply\", {\"status\": \"ok\", \"response\": {}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959767452,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959774404, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 3000, \"price\": {\"amount\": 3000, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 3400, \"currency\": \"GBP\"}, \"nextBidCents\": 3400, \"bidCount\": 22, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959767417, \"highestBidder\": {\"username\": \"bidder21\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959773579,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, \"23\", \"phoenix\", \"phx_reply\", {\"status\": \"ok\", \"response\": {}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959775295,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"auction_ended\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": false, \"auctionEndTime\": 1790959774404, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 3000, \"price\": {\"amount\": 3000, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 3400, \"currency\": \"GBP\"}, \"nextBidCents\": 3400, \"bidCount\": 22, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"SOLD\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959778840,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"payment_succeeded\", {\"product\": {\"id\": \"e51073c3-33e8-4246-a7bf-ac067b6e81fe\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #23\", \"isAuctionActive\": false, \"auctionEndTime\": 1790959774404, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 3000, \"price\": {\"amount\": 3000, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 3400, \"currency\": \"GBP\"}, \"nextBidCents\": 3400, \"bidCount\": 22, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"SOLD\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959783678,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, \"24\", \"phoenix\", \"phx_reply\", {\"status\": \"ok\", \"response\": {}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959787021,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"auction_started\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959801887, \"isSuddenDeath\": false, \"highestBid\": null, \"nextBidPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"nextBidCents\": 100, \"bidCount\": 0, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true}, \"timestamp\": 1790959786979}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959787107,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"product_updated\", {\"product\": {\"id\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"parentId\": null, \"name\": \"1. ITEM ON SCREEN. Listen to sizes\", \"isAuctionActive\": false, \"auctionEndTime\": null, \"isSuddenDeath\": false, \"highestBid\": null, \"nextBidPrice\": null, \"nextBidCents\": null, \"bidCount\": 0, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": null, \"bumpValueSeconds\": null, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": null}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959788743,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959801887, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 100, \"price\": {\"amount\": 100, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 200, \"currency\": \"GBP\"}, \"nextBidCents\": 200, \"bidCount\": 1, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959788708, \"highestBidder\": {\"username\": \"bidder28\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959789115,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959801887, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 200, \"price\": {\"amount\": 200, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 300, \"currency\": \"GBP\"}, \"nextBidCents\": 300, \"bidCount\": 2, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959789080, \"highestBidder\": {\"username\": \"bidder29\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959791018,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959801887, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 300, \"price\": {\"amount\": 300, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 400, \"currency\": \"GBP\"}, \"nextBidCents\": 400, \"bidCount\": 3, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959790912, \"highestBidder\": {\"username\": \"bidder30\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959791172,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959801887, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 1900, \"price\": {\"amount\": 1900, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2100, \"currency\": \"GBP\"}, \"nextBidCents\": 2100, \"bidCount\": 5, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959791135, \"highestBidder\": {\"username\": \"bidder31\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959791855,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959801887, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2200, \"price\": {\"amount\": 2200, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2400, \"currency\": \"GBP\"}, \"nextBidCents\": 2400, \"bidCount\": 7, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959791820, \"highestBidder\": {\"username\": \"bidder32\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959793769,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, \"25\", \"phoenix\", \"phx_reply\", {\"status\": \"ok\", \"response\": {}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959796571,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959803523, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2400, \"price\": {\"amount\": 2400, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 2600, \"currency\": \"GBP\"}, \"nextBidCents\": 2600, \"bidCount\": 9, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959796536, \"highestBidder\": {\"username\": \"bidder34\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959798964,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"new_bid\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": true, \"auctionEndTime\": 1790959805907, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2600, \"price\": {\"amount\": 2600, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 3000, \"currency\": \"GBP\"}, \"nextBidCents\": 3000, \"bidCount\": 10, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"ACTIVE\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true, \"bidAccepted\": true}, \"timestamp\": 1790959798921, \"highestBidder\": {\"username\": \"bidder35\"}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959803860,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, \"26\", \"phoenix\", \"phx_reply\", {\"status\": \"ok\", \"response\": {}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959806773,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[\"19\", null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"auction_ended\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": false, \"auctionEndTime\": 1790959805907, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2600, \"price\": {\"amount\": 2600, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 3000, \"currency\": \"GBP\"}, \"nextBidCents\": 3000, \"bidCount\": 10, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"SOLD\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true}}]"
+},
+{
+"kind": "ws-in",
+"t": 1790959809673,
+"socket": 2,
+"url": "wss://www.whatnot.com/services/auction/socket/websocket?_csrf_token=REDACTED&vsn=2.0.0",
+"text": "[null, null, \"commerce:95532af6-c616-44b3-9938-69fd0d9fffd0\", \"payment_succeeded\", {\"product\": {\"id\": \"7292ecb7-9a07-46dd-ae0d-1514b46ff6dd\", \"parentId\": \"9bab748b-883e-46d9-a5ce-df05234c9f84\", \"name\": \"1. ITEM ON SCREEN. Listen to sizes #24\", \"isAuctionActive\": false, \"auctionEndTime\": 1790959805907, \"isSuddenDeath\": false, \"highestBid\": {\"priceCents\": 2600, \"price\": {\"amount\": 2600, \"currency\": \"GBP\"}}, \"nextBidPrice\": {\"amount\": 3000, \"currency\": \"GBP\"}, \"nextBidCents\": 3000, \"bidCount\": 10, \"livestreamId\": \"95532af6-c616-44b3-9938-69fd0d9fffd0\", \"status\": \"SOLD\", \"bumpThresholdSeconds\": 7, \"bumpValueSeconds\": 7, \"auctionMinimumPrice\": {\"amount\": 100, \"currency\": \"GBP\"}, \"transactionType\": \"AUCTION\", \"isAuction\": true}}]"
+}
+]
+}

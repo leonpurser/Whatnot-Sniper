@@ -21,14 +21,20 @@
     let hi = Infinity;
     let samples = 0;
     let resets = 0;
+    let rejected = 0;
     const sources = new Set();
 
     function constrain(sLo, sHi, source) {
-      samples++;
-      sources.add(source);
       const nLo = Math.max(lo, sLo);
       const nHi = Math.min(hi, sHi);
       if (nLo > nHi) {
+        // Conflict. A two-sided sample (HTTP Date) is self-contained, so restart
+        // from it (clock jump, or an earlier cached Date). A one-sided sample
+        // (server timestamp) cannot be trusted over the existing interval.
+        if (!Number.isFinite(sLo) || !Number.isFinite(sHi)) {
+          rejected++;
+          return;
+        }
         lo = sLo;
         hi = sHi;
         resets++;
@@ -36,6 +42,8 @@
         lo = nLo;
         hi = nHi;
       }
+      samples++;
+      sources.add(source);
     }
 
     return {
@@ -70,6 +78,7 @@
           hi: Number.isFinite(hi) ? Math.round(hi) : null,
           samples,
           resets,
+          rejected,
           sources: Array.from(sources),
         };
       },

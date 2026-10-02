@@ -47,7 +47,7 @@
 
     add('auction-active', s.active === true && s.ended !== true, `active=${s.active} ended=${s.ended}`);
 
-    const age = s.lastUpdatePerf == null ? null : ctx.nowPerf - s.lastUpdatePerf;
+    const age = s.lastAlivePerf == null ? null : ctx.nowPerf - s.lastAlivePerf;
     add('state-fresh', age != null && age >= 0 && age <= ctx.staleMs, `age=${age == null ? 'unknown' : Math.round(age) + 'ms'}`);
 
     add('price-known', Number.isInteger(s.currentBidMinor), `current=${s.currentBidMinor}`);

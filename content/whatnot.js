@@ -72,24 +72,27 @@
       if ((kind === 'fetch' || kind === 'xhr') && payload.dateHeader && payload.method !== 'GET' && payload.start && payload.end) {
         clock.addDateSample(payload.dateHeader, payload.start.t, payload.end.t);
       }
-      if (kind === 'ws-connect' || kind === 'ws-close') log.info(`${kind} #${payload.socket} ${payload.url}${kind === 'ws-close' ? ` code=${payload.code}` : ''}`);
+      if (kind === 'ws-connect' || kind === 'ws-close') {
+        log.info(`${kind} #${payload.socket} ${String(payload.url).split('?')[0]}${kind === 'ws-close' ? ` code=${payload.code}` : ''}`);
+      }
       capture.add(kind, payload);
     },
   });
 
   // Each capture is offered to every registered auction-state source.
+  const sourceCtx = { store, clock, log };
   capture.subscribe((entry, json) => {
     for (const src of WBA.sources.all()) {
       if (typeof src.onCapture !== 'function') continue;
       try {
-        src.onCapture(entry, json, store);
+        src.onCapture(entry, json, sourceCtx);
       } catch (e) {
         log.error(`source ${src.name} failed`, String(e));
       }
     }
   });
   for (const src of WBA.sources.all()) {
-    if (typeof src.start === 'function') src.start({ store, clock, log });
+    if (typeof src.start === 'function') src.start(sourceCtx);
   }
 
   // ------------------------------------------------------------ DOM watch --
@@ -129,6 +132,7 @@
       capture: capture.stats(),
       domWatch: watcher.running,
       sources: WBA.sources.all().map((x) => x.name),
+      sourceStats: Object.fromEntries(WBA.sources.all().map((x) => [x.name, typeof x.stats === 'function' ? x.stats() : null])),
       lastAttempt: executor.getLastAttempt(),
     };
   }

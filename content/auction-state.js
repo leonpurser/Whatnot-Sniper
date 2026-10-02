@@ -100,6 +100,7 @@
       }
       state.lastUpdate = t;
       state.lastUpdatePerf = perfNow();
+      state.lastAlivePerf = state.lastUpdatePerf;
       const status = deriveStatus();
       if (status !== state.status) {
         log.info(`status ${state.status} -> ${status}`);
@@ -111,14 +112,33 @@
       return true;
     }
 
+    const QUIET_FIELDS = new Set(['bidCount', 'highestBidder', 'bumpThresholdSeconds', 'bumpValueSeconds', 'currency']);
+
     function logChange(k, old, v, source) {
+      if (QUIET_FIELDS.has(k)) return;
       const tag = `[${source}]`;
-      if (k === 'currentBidMinor') log.info(`bid update ${fmtMoney(old)} -> ${fmtMoney(v)} ${tag}`);
+      if (k === 'currentBidMinor') {
+        const who = state.highestBidder ? ` by ${state.highestBidder}` : '';
+        log.info(`bid update ${fmtMoney(old)} -> ${fmtMoney(v)}${who} ${tag}`);
+      }
       else if (k === 'nextBidMinor') log.info(`next bid ${fmtMoney(v)} ${tag}`);
       else if (k === 'endTime') {
         const delta = old != null && v != null ? ` (${v - old >= 0 ? '+' : ''}${v - old}ms)` : '';
         log.info(`endTime=${WBA.fmtTime(v)}${delta} ${tag}`);
       } else log.info(`${k}=${JSON.stringify(v)} ${tag}`);
+    }
+
+    /** The source is alive (e.g. heartbeat reply) even though no auction data changed. */
+    function touch() {
+      state.lastAlivePerf = perfNow();
+    }
+
+    /** The source lost its connection: state can no longer be trusted as current. */
+    function markDead(source, reason) {
+      if (state.lastAlivePerf == null) return;
+      state.lastAlivePerf = null;
+      log.warn(`source ${source} down (${reason}) — state treated as stale`);
+      emit({ type: 'update', source, changed: true });
     }
 
     function setStream(id) {
@@ -131,6 +151,8 @@
 
     return {
       update,
+      touch,
+      markDead,
       reset,
       setStream,
       getStreamId: () => streamId,

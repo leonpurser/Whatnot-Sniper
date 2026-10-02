@@ -10,16 +10,17 @@
     CHANNEL: 'wba-v1',
     PORT_NAME: 'wba-panel',
 
-    // UNVERIFIED: believed to be Whatnot's livestream URL shape (/live/<id>).
-    // Confirm against a real stream URL during milestone 1.
+    // Verified: /live/<livestreamId>; the same id appears in the auction socket
+    // channel topic "commerce:<livestreamId>".
     STREAM_PATH_PATTERN: /^\/live\/([^/?#]+)/,
 
     CAPTURE_LIMIT: 3000, // entries kept in the inspection ring buffer
     MAX_STORE_CHARS: 32000, // per-entry payload kept in the buffer (full text is still indexed)
     MAX_DISCOVERY_FIELDS: 3000,
 
-    // Auction state older than this is treated as stale by the safety checks.
-    STALE_STATE_MS: 3000,
+    // The auction-state source must have shown signs of life (any message on the
+    // auction socket, incl. Phoenix heartbeat replies every ~10 s) within this window.
+    STALE_STATE_MS: 15000,
 
     TARGET_MS_MIN: 50,
     TARGET_MS_MAX: 10000,

@@ -22,7 +22,7 @@ function goodCtx(over = {}) {
     currentBidMinor: 2200,
     nextBidMinor: 2300,
     endTime: 10_000,
-    lastUpdatePerf: 1000,
+    lastAlivePerf: 1000,
   };
   return {
     state: { ...state, ...(over.state || {}) },
@@ -142,7 +142,7 @@ test('discovery indexes auction-like keys and tolerates framing', () => {
 });
 
 function makeExecutor(stateOver = {}, ctxOver = {}) {
-  const state = { ...WBA.createEmptyAuctionState(), auctionId: 'A1', active: true, currentBidMinor: 2200, nextBidMinor: 2300, endTime: Date.now() + 5000, lastUpdatePerf: performance.now(), ...stateOver };
+  const state = { ...WBA.createEmptyAuctionState(), auctionId: 'A1', active: true, currentBidMinor: 2200, nextBidMinor: 2300, endTime: Date.now() + 5000, lastAlivePerf: performance.now(), ...stateOver };
   const log = quietLog();
   const ex = WBA.createBidExecutor({
     log,

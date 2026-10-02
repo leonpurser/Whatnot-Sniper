@@ -3,10 +3,10 @@
 A bidding/sniping assistant for live auctions on Whatnot's desktop site. It runs in the
 Whatnot tab you are already logged into. It never asks for credentials.
 
-**Current stage: milestone 1 — inspection.** The extension loads on Whatnot, detects the
-livestream, captures everything the page receives and gives you tools to find where the
-auction state comes from. **It cannot place a real bid**: the bid executor is a stub
-that only validates and dry-runs.
+**Current stage: milestone 1, auction state.** Live auction state (item, price, next bid,
+server end time, Sudden Death flag, start/end) is read from Whatnot's auction WebSocket.
+See [docs/FINDINGS.md](docs/FINDINGS.md). **It cannot place a real bid**: the bid executor
+is a stub that only validates and dry-runs.
 
 ## Install (unpacked)
 
@@ -25,7 +25,7 @@ WHATNOT PAGE
 content/page-bridge.js ──► content/capture-store.js   ring buffer + field discovery
                                 │
                                 ▼  every observation
-                       content/sources/*  (AUCTION STATE READERS — none registered yet)
+                       content/sources/*  AUCTION STATE READERS (whatnot-auction-socket.js)
                                 │  store.update({...}, sourceName)
                                 ▼
                        content/auction-state.js   INTERNAL AUCTION STATE
@@ -62,12 +62,12 @@ Design rules already enforced:
 ## Development
 
 ```
-npm test        # unit tests for safety, state store, clock, discovery, executor, sniper
+npm test        # unit tests + replay of a sanitized real auction capture (tests/fixtures)
 npm run check   # syntax-check every JS file
 ```
 
 ## Next steps
 
-See [docs/INSPECTION.md](docs/INSPECTION.md) for what to capture on a real stream. Once
-the real data source is known, we add a source in `content/sources/` that maps it into
-`store.update(...)`. After that come the scheduler (milestone 2) and the real bid action.
+Still needed from a live stream (see [docs/INSPECTION.md](docs/INSPECTION.md)): a Sudden Death
+auction, and one manual bid, to learn how Whatnot submits a bid. After that come the
+scheduler (milestone 2) and the real bid action.

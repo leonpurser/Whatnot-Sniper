@@ -16,6 +16,11 @@
     }
   }
 
+  /** Strip credentials (e.g. the socket _csrf_token) so logs/exports are safer to share. */
+  function redactUrl(url) {
+    return url.replace(/([?&](?:_csrf_token|token|access_token|auth)[^=&]*=)[^&#]*/gi, '$1REDACTED');
+  }
+
   /** Aggregation key: which channel/operation a payload came from. */
   function sourceKey(entry, json, reqJson) {
     const kind = entry.kind.startsWith('ws-') ? entry.kind : entry.kind === 'xhr' ? 'fetch' : entry.kind;
@@ -44,6 +49,7 @@
 
     function add(kind, payload) {
       const entry = { seq: ++seq, kind, t: Date.now(), ...payload };
+      if (typeof entry.url === 'string') entry.url = redactUrl(entry.url);
       counts[kind] = (counts[kind] || 0) + 1;
 
       let json;

@@ -12,6 +12,7 @@ const files = [
   'content/capture-store.js',
   'content/auction-state.js',
   'content/sources/registry.js',
+  'content/sources/whatnot-auction-socket.js',
   'content/bid-executor.js',
   'content/sniper.js',
 ];

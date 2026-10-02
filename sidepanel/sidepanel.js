@@ -143,7 +143,11 @@
     const cur = s && s.currency;
     $('streamId').textContent = (snap && snap.streamId) || (snap ? 'not on a livestream page' : '—');
     $('itemName').textContent = (s && s.itemName) || '—';
-    $('current').textContent = s ? fmtMoney(s.currentBidMinor, cur) : '—';
+    $('current').textContent = !s
+      ? '—'
+      : s.bidCount === 0
+        ? 'no bids'
+        : fmtMoney(s.currentBidMinor, cur) + (s.highestBidder ? ` (${s.highestBidder})` : '');
     $('next').textContent = s ? fmtMoney(s.nextBidMinor, cur) : '—';
     $('type').textContent = !s || s.suddenDeath == null ? 'unknown' : s.suddenDeath ? 'SUDDEN DEATH' : 'NORMAL';
     $('type').className = 'v' + (s && s.suddenDeath ? ' sd' : '');
@@ -208,19 +212,29 @@
       ['Current price', `${fmtMoney(s.currentBidMinor, cur)}  (${srcOf('currentBidMinor')})`],
       ['Next bid', `${fmtMoney(s.nextBidMinor, cur)}  (${srcOf('nextBidMinor')})`],
       ['Maximum', fmtMoney(snap.settings.maxBidMinor, cur)],
+      ['Bids', `${s.bidCount ?? '—'}${s.highestBidder ? ' — high: ' + s.highestBidder : ''}`],
       ['Sudden Death', `${s.suddenDeath}  (${srcOf('suddenDeath')})`],
+      ['Bump rule', s.bumpThresholdSeconds != null ? `bid with <${s.bumpThresholdSeconds}s left → ${s.bumpValueSeconds}s` : '—'],
       ['End timestamp', s.endTime ? `${WBA.fmtTime(s.endTime)}  (${srcOf('endTime')})` : '—'],
       ['End-time changes', String(Math.max(0, (s.endTimeHistory || []).length - 1))],
       ['Remaining (calc)', s.endTime ? `${Math.round(s.endTime - serverNow())} ms` : '—'],
       ['Last state update', s.lastUpdate ? WBA.fmtTime(s.lastUpdate) : '—'],
       ['State sources', snap.sources.length ? snap.sources.join(', ') : 'none configured'],
+      ...Object.entries(snap.sourceStats || {}).map(([name, st]) => [
+        `  ${name}`,
+        st
+          ? `socket ${st.socketOpen ? 'open' : 'closed'} · ${st.frames} frames · last ${st.lastEvent || '—'}` +
+            `${st.lastLatencyMs != null ? ` · latency ~${st.lastLatencyMs}ms` : ''} · ignored ${st.ignored}`
+          : '—',
+      ]),
+      ['Source alive', s.lastAlivePerf != null ? 'yes' : 'NO (stale)'],
       ['Armed', snap.armed ? `yes — ${snap.armed.auctionId}` : 'no'],
       ['Target timing', `${snap.settings.targetMs} ms`],
       ['Dry run', String(snap.settings.dryRun !== false)],
       [
         'Clock offset',
         ck.samples
-          ? `${ck.offsetMs} ms ± ${ck.uncertaintyMs ?? '?'} (${ck.samples} samples, ${ck.sources.join('+')}, resets ${ck.resets})`
+          ? `${ck.offsetMs} ms ± ${ck.uncertaintyMs ?? '?'} (${ck.samples} samples, ${ck.sources.join('+')}, resets ${ck.resets}, rejected ${ck.rejected})`
           : 'no samples yet (assuming 0)',
       ],
       ['DOM watch', snap.domWatch ? 'on' : 'off'],

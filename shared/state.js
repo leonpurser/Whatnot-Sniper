@@ -24,6 +24,10 @@
     'endTime', // server epoch ms
     'suddenDeath', // true | false | null (unknown)
     'ended',
+    'bidCount',
+    'highestBidder', // username of the current high bidder
+    'bumpThresholdSeconds', // normal auctions: a bid with < this many seconds left extends the timer
+    'bumpValueSeconds', // ...to this many seconds
   ]);
 
   WBA.createEmptyAuctionState = function () {
@@ -37,10 +41,18 @@
       endTime: null,
       suddenDeath: null,
       ended: false,
+      bidCount: null,
+      highestBidder: null,
+      bumpThresholdSeconds: null,
+      bumpValueSeconds: null,
       status: WBA.STATUS.IDLE,
       // bookkeeping
       lastUpdate: null, // epoch ms of the last applied update
       lastUpdatePerf: null, // performance.now() of the last applied update
+      // performance.now() of the last sign of life from the data source (e.g. a
+      // socket heartbeat). Auctions can go seconds without a bid, so freshness is
+      // judged on source liveness rather than on the last data change.
+      lastAlivePerf: null,
       fieldSources: {}, // field -> { source, t }
       endTimeHistory: [], // [{ t, endTime, source }] — tracks extensions in normal auctions
     };
