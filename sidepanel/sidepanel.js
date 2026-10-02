@@ -270,6 +270,7 @@
     $('emptyState').classList.toggle('hidden', onStream);
     $('app').classList.toggle('hidden', !onStream);
     if (!onStream) {
+      onStreamSince = 0;
       const btn = $('emptyAction');
       if (problem) {
         $('emptyTitle').textContent = problem.title;
@@ -314,7 +315,7 @@
       badge.className = 'badge live';
     }
     $('bidCount').textContent = s.bidCount != null && s.auctionId ? `${s.bidCount} bid${s.bidCount === 1 ? '' : 's'}` : '';
-    $('itemName').textContent = s.itemName || (s.auctionId ? 'Untitled item' : 'Waiting for the next auction…');
+    $('itemName').textContent = s.itemName || (s.auctionId ? 'Untitled item' : waitingText());
     $('current').textContent = !s.auctionId ? '—' : s.bidCount === 0 ? 'No bids' : shortMoney(s.currentBidMinor, cur);
 
     const win = $('winner');
@@ -355,6 +356,19 @@
         .map(([k, v]) => `${k}:${v}`)
         .join(' ');
     $('recToggle').textContent = c.recording ? 'Pause recording' : 'Resume recording';
+  }
+
+  // Explain an empty auction card: no data at all usually means the page
+  // loaded before the extension, or Whatnot's auction connection wasn't seen.
+  let onStreamSince = 0;
+  function waitingText() {
+    if (!onStreamSince) onStreamSince = Date.now();
+    if (!snap.hookReady) return 'Reload the Whatnot tab to finish connecting';
+    const st = (snap.sourceStats || {})['auction-socket'];
+    if (st && st.frames === 0 && Date.now() - onStreamSince > 10000) {
+      return 'No auction data from Whatnot yet — reload the tab';
+    }
+    return 'Waiting for the next auction…';
   }
 
   function renderAutoStatus(s, cur, live, armed) {
@@ -742,6 +756,7 @@
     if (lastProbe) navigator.clipboard.writeText(JSON.stringify(lastProbe, null, 2)).catch(() => {});
   });
 
+  $('version').textContent = 'v' + chrome.runtime.getManifest().version;
   connect();
   render();
 })();

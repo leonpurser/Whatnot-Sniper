@@ -1,6 +1,6 @@
 {
   "name": "whatnot-bid-assistant",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "description": "Chrome MV3 extension: Whatnot auction-state inspector and bidding assistant",
   "scripts": {
