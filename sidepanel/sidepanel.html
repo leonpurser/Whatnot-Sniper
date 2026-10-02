@@ -28,7 +28,18 @@
       </div>
       <div class="row">
         <label class="k" for="dryRun">Dry run</label>
-        <span><input id="dryRun" type="checkbox" checked disabled /> <small>forced on — no real executor yet</small></span>
+        <span><input id="dryRun" type="checkbox" checked /> <small id="modeNote">no real bids are sent</small></span>
+      </div>
+      <div id="liveConfirm" class="confirm hidden">
+        <strong>Enable LIVE bidding?</strong>
+        <p>
+          BID NOW and the armed sniper will place <b>real bids</b> on Whatnot, which can result in a purchase.
+          Maximum: <b id="liveMax">—</b>. Live mode switches off when the page reloads or the stream changes.
+        </p>
+        <div class="buttons">
+          <button id="liveYes" class="danger">Enable LIVE</button>
+          <button id="liveNo">Cancel</button>
+        </div>
       </div>
       <div class="buttons">
         <button id="bidNow" class="danger">BID NOW</button>
@@ -41,6 +52,11 @@
         from (see docs/INSPECTION.md).
       </p>
     </section>
+
+    <details id="timingBox" open>
+      <summary>Bid attempts &amp; timing</summary>
+      <div id="history" class="out"></div>
+    </details>
 
     <details id="debug" open>
       <summary>Debug</summary>

@@ -28,7 +28,6 @@
     DEFAULT_SETTINGS: Object.freeze({
       maxBidMinor: null, // user maximum, integer minor units (pence/cents)
       targetMs: 500, // sniper trigger offset before server end time
-      dryRun: true, // MUST stay true until a real executor exists
       keepArmedAcrossAuctions: false,
       domWatch: true, // record price/timer DOM mutations into the capture timeline
     }),

@@ -25,20 +25,35 @@
   let lastPick = null;
   const ports = new Set();
 
-  const sniper = WBA.createSniper({ log, store, getSettings: () => settings });
+  // LIVE bidding is deliberately not persisted: every page load, stream change
+  // and extension reload starts in dry run, and going live needs an explicit
+  // confirmation in the side panel.
+  let liveMode = false;
+  const socketSource = WBA.sources.all().find((x) => x.name === 'auction-socket');
+  const selfUserId = () => (socketSource ? socketSource.getSelfUserId() : null);
+
+  let sniper = null;
   const executor = WBA.createBidExecutor({
     log,
     getContext: () => ({
       state: store.get(),
       streamId: store.getStreamId(),
       serverNow: () => clock.serverNow(),
+      clockUncertaintyMs: clock.snapshot().uncertaintyMs,
       staleMs: C.STALE_STATE_MS,
-      armed: !!sniper.armed,
-      armedAuctionId: sniper.armed ? sniper.armed.auctionId : null,
-      // Belt and braces: dry run is forced on while no real executor exists.
-      dryRun: settings.dryRun !== false,
+      armed: !!(sniper && sniper.armed),
+      armedAuctionId: sniper && sniper.armed ? sniper.armed.auctionId : null,
+      selfUserId: selfUserId(),
+      dryRun: !liveMode,
     }),
+    sendBid: ({ auctionId, amountMinor, currency }) =>
+      bridge.request(
+        'place-bid',
+        { topic: `commerce:${store.getStreamId()}`, productId: auctionId, amountMinor, currency },
+        8000
+      ),
   });
+  sniper = WBA.createSniper({ log, store, getSettings: () => settings, executor, clock, isLive: () => liveMode, onChange: () => schedulePush() });
 
   // ------------------------------------------------------------ settings --
   chrome.storage.local.get('settings').then(({ settings: s }) => {
@@ -50,6 +65,7 @@
     if (area !== 'local' || !changes.settings) return;
     settings = { ...C.DEFAULT_SETTINGS, ...(changes.settings.newValue || {}) };
     applyDomWatch();
+    sniper.reschedule(); // target timing may have changed
     schedulePush();
   });
 
@@ -109,6 +125,8 @@
   WBA.createStreamDetector({
     pattern: C.STREAM_PATH_PATTERN,
     onChange(id) {
+      if (liveMode) log.info('stream changed — back to DRY RUN');
+      liveMode = false;
       store.setStream(id);
       applyDomWatch();
       capture.add('note', { url: location.href, text: id ? `stream ${id}` : 'not on a stream' });
@@ -128,12 +146,16 @@
       state: s,
       settings,
       armed: sniper.armed,
+      plan: sniper.plan,
+      liveMode,
+      selfUserId: selfUserId(),
       clock: clock.snapshot(),
       capture: capture.stats(),
       domWatch: watcher.running,
       sources: WBA.sources.all().map((x) => x.name),
       sourceStats: Object.fromEntries(WBA.sources.all().map((x) => [x.name, typeof x.stats === 'function' ? x.stats() : null])),
       lastAttempt: executor.getLastAttempt(),
+      history: executor.getHistory().slice(0, 15).map(({ checks, response, ...rest }) => rest),
     };
   }
   function schedulePush() {
@@ -155,7 +177,7 @@
   }
   function updateBadge() {
     const s = store.get();
-    const text = sniper.armed ? 'ARM' : s.status === WBA.STATUS.ACTIVE ? 'LIVE' : store.getStreamId() ? 'ON' : '';
+    const text = sniper.armed ? (liveMode ? 'LIVE' : 'ARM') : s.status === WBA.STATUS.ACTIVE ? 'LIVE' : store.getStreamId() ? 'ON' : '';
     if (text === lastBadge) return;
     lastBadge = text;
     try {
@@ -174,7 +196,13 @@
     [M.GET_SNAPSHOT]: () => ({ ...snapshot(), log: log.entries().slice(-200), lastPick }),
     [M.SET_RECORDING]: ({ on }) => (capture.setRecording(on), capture.stats()),
     [M.CLEAR_CAPTURE]: () => (capture.clear(), capture.stats()),
-    [M.EXPORT_CAPTURE]: () => ({ ...capture.exportData(), clock: clock.snapshot(), state: store.get(), log: log.entries() }),
+    [M.EXPORT_CAPTURE]: () => ({
+      ...capture.exportData(),
+      clock: clock.snapshot(),
+      state: store.get(),
+      bidHistory: executor.getHistory(),
+      log: log.entries(),
+    }),
     [M.LIST_FIELDS]: ({ filter }) => capture.listFields({ filter: filter || '', limit: 400 }),
     [M.SEARCH_CAPTURE]: ({ needle }) => capture.search(needle),
     [M.DOM_SCAN]: () => WBA.domProbe.scan(),
@@ -185,6 +213,13 @@
       const e = capture.add('marker', { p: performance.now(), url: location.href, text: String(label || 'marker') });
       log.info(`MARKER: ${e.text}`);
       return { seq: e.seq };
+    },
+    [M.SET_LIVE]: ({ on, confirmed }) => {
+      if (on && confirmed !== true) throw new Error('live mode needs confirmation');
+      liveMode = !!on;
+      log.warn(liveMode ? 'LIVE BIDDING ENABLED — bids will be placed for real' : 'back to DRY RUN');
+      schedulePush();
+      return { liveMode };
     },
     [M.BID_NOW]: async ({ expectedAuctionId, expectedStreamId }) => {
       try {

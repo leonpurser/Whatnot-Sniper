@@ -1,11 +1,14 @@
 // Runs in the PAGE's JavaScript world ("world": "MAIN") at document_start so it
 // is installed before Whatnot's own code creates sockets or issues requests.
 //
-// Purpose (milestone 1 = inspection only):
+// Purpose:
 //   * observe data the page legitimately receives: WebSocket frames, fetch and
-//     XHR responses. Requests/responses are never modified, delayed or sent.
+//     XHR responses. The page's own requests/responses are never modified or delayed.
 //   * answer inspection requests from the content script: React fiber probes,
 //     page globals (Apollo cache etc.), click-to-pick an element.
+//   * place a bid on request (see "bid execution" below): sends the same
+//     place_bid push the Whatnot page itself sends, on the page's own
+//     authenticated auction socket, after a last-moment check here.
 //
 // Everything is forwarded to the isolated-world content script with
 // window.postMessage tagged with CHANNEL.
@@ -19,6 +22,7 @@
   const MAX_TEXT = 200000;
   const BINARY_PREVIEW_BYTES = 4096;
   const TEXTUAL_CT = /json|text\/plain|graphql/i;
+  const AUCTION_SOCKET = /^wss:\/\/(?:www\.)?whatnot\.com\/services\/auction\/socket\/websocket/;
   const INTERESTING =
     /auction|bid|price|amount|endsAt|endAt|endTime|ends_at|end_time|expir|timer|countdown|sudden|death|listing|lot|winner|sold|increment/i;
 
@@ -70,6 +74,7 @@
     NativeWS.prototype.send = function (data) {
       const ts = stamp();
       const socket = socketIds.get(this) || null;
+      if (typeof data === 'string' && auctionSockets.has(socket)) observeAuctionSend(socket, data);
       const url = this.url;
       try {
         Promise.resolve(describeData(data))
@@ -87,14 +92,18 @@
         const socket = nextSocketId++;
         socketIds.set(this, socket);
         const url = this.url;
+        const isAuction = AUCTION_SOCKET.test(url);
+        if (isAuction) auctionSockets.set(socket, { ws: this, joins: new Map() });
         post('ws-connect', { socket, url, ...stamp() });
         this.addEventListener('open', () => post('ws-open', { socket, url, protocol: this.protocol, ...stamp() }));
-        this.addEventListener('close', (e) =>
-          post('ws-close', { socket, url, code: e.code, reason: e.reason, ...stamp() })
-        );
+        this.addEventListener('close', (e) => {
+          auctionSockets.delete(socket);
+          post('ws-close', { socket, url, code: e.code, reason: e.reason, ...stamp() });
+        });
         this.addEventListener('message', (e) => {
           // e.timeStamp: when the event was created (same timeline as performance.now()).
           const ts = { ...stamp(), ev: e.timeStamp };
+          if (isAuction && typeof e.data === 'string') observeAuctionFrame(socket, e.data, ts);
           Promise.resolve(describeData(e.data))
             .then((d) => post('ws-in', { socket, url, ...ts, ...d }))
             .catch(() => {});
@@ -102,6 +111,130 @@
       }
     };
     window.WebSocket = Hooked;
+  }
+
+  // ------------------------------------------------- auction socket state --
+  // Minimal tracking of the auction socket so a bid can be checked against the
+  // freshest data at the moment it is sent (the content script's copy of the
+  // state lags by a postMessage hop).
+  //   joins:  topic -> { joinRef, ok }        (from our observation of the page's phx_join)
+  //   latest: topic -> { id, active, next, currency, endTime, t }
+  const auctionSockets = new Map(); // socketId -> { ws, joins }
+  const latestByTopic = new Map();
+  const pendingReplies = new Map(); // ref -> resolve
+  function parsePhx(text) {
+    try {
+      const j = JSON.parse(text);
+      return Array.isArray(j) && j.length === 5 ? j : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  function observeAuctionSend(socket, text) {
+    const f = parsePhx(text);
+    if (!f) return;
+    const [joinRef, ref, topic, event] = f;
+    const s = auctionSockets.get(socket);
+    if (event === 'phx_join') s.joins.set(topic, { joinRef, ref, ok: false });
+    else if (event === 'phx_leave') s.joins.delete(topic);
+  }
+  function observeAuctionFrame(socket, text, ts) {
+    const f = parsePhx(text);
+    if (!f) return;
+    const [, ref, topic, event, payload] = f;
+    const s = auctionSockets.get(socket);
+    if (event === 'phx_reply') {
+      const j = s && s.joins.get(topic);
+      if (j && j.ref === ref) j.ok = payload && payload.status === 'ok';
+      const pending = pendingReplies.get(ref);
+      if (pending) {
+        pendingReplies.delete(ref);
+        pending({ payload, ts });
+      }
+      return;
+    }
+    if (event === 'phx_close' || event === 'phx_error') {
+      if (s) s.joins.delete(topic);
+      return;
+    }
+    const pr = payload && (payload.product || payload.pinnedProduct);
+    if (!pr || typeof pr.id !== 'string') return;
+    const cur = latestByTopic.get(topic);
+    if (pr.isAuctionActive === true) {
+      const next = pr.nextBidPrice && Number.isInteger(pr.nextBidPrice.amount) ? pr.nextBidPrice.amount : null;
+      latestByTopic.set(topic, {
+        id: pr.id,
+        active: true,
+        next,
+        currency: pr.nextBidPrice ? pr.nextBidPrice.currency : null,
+        endTime: pr.auctionEndTime,
+        t: ts.t,
+      });
+    } else if (cur && cur.id === pr.id) {
+      cur.active = false; // this auction ended; inactive parent listings are ignored
+    }
+  }
+
+  // -------------------------------------------------------- bid execution --
+  // Sends exactly the frame the Whatnot page sends when you press bid:
+  //   [joinRef, ref, "commerce:<livestreamId>", "place_bid",
+  //    { bidType: "STANDARD_BID", isCustomBid: false, price: {amount, currency},
+  //      productId, validatePotentialTrollBid: false }]
+  // (the page also adds telemetry "sloStories"; omitted). Our refs are prefixed
+  // strings so they can never collide with the page's numeric refs; the page's
+  // Phoenix client ignores replies to refs it did not issue.
+  let bidSeq = 0;
+  function placeBid({ topic, productId, amountMinor, currency, timeoutMs = 4000 }) {
+    const fail = (reason, detail) => ({ sent: false, reason, detail: detail || null });
+    if (typeof topic !== 'string' || typeof productId !== 'string' || !Number.isInteger(amountMinor) || amountMinor <= 0) {
+      return fail('BAD_ARGS');
+    }
+    let target = null;
+    for (const s of auctionSockets.values()) {
+      const j = s.joins.get(topic);
+      if (s.ws.readyState === NativeWS.OPEN && j && j.ok) target = { ws: s.ws, joinRef: j.joinRef };
+    }
+    if (!target) return fail('NO_JOINED_SOCKET');
+    const latest = latestByTopic.get(topic);
+    if (!latest) return fail('NO_AUCTION_SEEN');
+    if (latest.id !== productId) return fail('AUCTION_CHANGED', `page=${latest.id}`);
+    if (!latest.active) return fail('AUCTION_NOT_ACTIVE');
+    if (latest.next !== amountMinor) return fail('PRICE_MOVED', `page next=${latest.next}`);
+    if (currency && latest.currency && latest.currency !== currency) return fail('CURRENCY_MISMATCH');
+
+    const ref = `wba${++bidSeq}`;
+    const frame = JSON.stringify([
+      target.joinRef,
+      ref,
+      topic,
+      'place_bid',
+      {
+        bidType: 'STANDARD_BID',
+        isCustomBid: false,
+        price: { amount: amountMinor, currency: latest.currency || currency },
+        productId,
+        validatePotentialTrollBid: false,
+      },
+    ]);
+    return new Promise((resolve) => {
+      let send = null;
+      const timer = setTimeout(() => {
+        pendingReplies.delete(ref);
+        resolve({ sent: true, ref, send, reply: null, reason: 'NO_REPLY' });
+      }, timeoutMs);
+      pendingReplies.set(ref, ({ payload, ts }) => {
+        clearTimeout(timer);
+        resolve({ sent: true, ref, send, reply: { ...ts, status: payload && payload.status, response: ser(payload && payload.response, 3) } });
+      });
+      try {
+        send = stamp();
+        target.ws.send(frame); // goes through the observed send, so it appears in the capture as ws-out
+      } catch (e) {
+        clearTimeout(timer);
+        pendingReplies.delete(ref);
+        resolve(fail('SEND_FAILED', String(e)));
+      }
+    });
   }
 
   // ----------------------------------------------------------------- fetch --
@@ -492,22 +625,26 @@
     'globals-probe': globalsProbe,
     'pick-start': startPick,
     'pick-stop': () => (stopPick(), { stopped: true }),
+    'place-bid': placeBid,
   };
   window.addEventListener('message', (ev) => {
     const d = ev.data;
     if (ev.source !== window || !d || d.__wba !== CHANNEL || d.dir !== 'content') return;
-    let result;
-    let error = null;
+    const reply = (result, error) => {
+      try {
+        window.postMessage({ __wba: CHANNEL, dir: 'page-reply', id: d.id, result, error }, window.location.origin);
+      } catch (e) {
+        window.postMessage({ __wba: CHANNEL, dir: 'page-reply', id: d.id, error: 'unserialisable result: ' + e }, window.location.origin);
+      }
+    };
     try {
       if (!COMMANDS[d.cmd]) throw new Error('unknown command ' + d.cmd);
-      result = COMMANDS[d.cmd](d.args || {});
+      Promise.resolve(COMMANDS[d.cmd](d.args || {})).then(
+        (r) => reply(r, null),
+        (e) => reply(undefined, String((e && e.stack) || e))
+      );
     } catch (e) {
-      error = String((e && e.stack) || e);
-    }
-    try {
-      window.postMessage({ __wba: CHANNEL, dir: 'page-reply', id: d.id, result, error }, window.location.origin);
-    } catch (e) {
-      window.postMessage({ __wba: CHANNEL, dir: 'page-reply', id: d.id, error: 'unserialisable result: ' + e }, window.location.origin);
+      reply(undefined, String((e && e.stack) || e));
     }
   });
 

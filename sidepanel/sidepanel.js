@@ -116,7 +116,7 @@
     $('targetMs').value = settings.targetMs;
   });
   function saveSettings(patch) {
-    settings = { ...settings, ...patch, dryRun: true };
+    settings = { ...settings, ...patch };
     return chrome.storage.local.set({ settings });
   }
   $('maxBid').addEventListener('change', () => {
@@ -156,6 +156,11 @@
     $('arm').textContent = armed ? 'DISARM' : 'ARM AUTO BID';
     $('arm').classList.toggle('armed', !!armed);
     $('noSources').classList.toggle('hidden', !!(snap && snap.sources && snap.sources.length));
+    const live = !!(snap && snap.liveMode);
+    $('dryRun').checked = !live;
+    $('modeNote').textContent = live ? 'LIVE — bids are placed for real' : 'no real bids are sent';
+    document.body.classList.toggle('live', live);
+    renderHistory(snap && snap.history, cur);
     renderAttempt(snap && snap.lastAttempt, cur);
     renderDebug();
     if (snap) {
@@ -189,6 +194,37 @@
       }
       el.appendChild(ul);
     }
+  }
+
+  function renderHistory(rows, cur) {
+    const out = $('history');
+    out.innerHTML = '';
+    if (!rows || !rows.length) return;
+    const table = document.createElement('table');
+    table.className = 'fields';
+    table.innerHTML =
+      '<tr><th>time</th><th>how</th><th>result</th><th>bid</th><th>est. left</th><th>server left</th><th>rtt</th><th>sched late</th></tr>';
+    for (const a of rows) {
+      const tr = document.createElement('tr');
+      const vals = [
+        WBA.fmtTime(a.t),
+        `${a.trigger}${a.dryRun ? ' (dry)' : ''}${a.suddenDeath ? ' SD' : ''}`,
+        a.reason,
+        a.amountMinor != null ? fmtMoney(a.amountMinor, a.currency || cur) : '—',
+        a.remainingMs != null ? `${a.remainingMs}ms` : '—',
+        a.serverRemainingMs != null ? `${a.serverRemainingMs}ms` : '—',
+        a.rttMs != null ? `${a.rttMs}ms` : '—',
+        a.plannedLateMs != null ? `${a.plannedLateMs}ms` : '—',
+      ];
+      for (const v of vals) {
+        const td = document.createElement('td');
+        td.textContent = v;
+        tr.appendChild(td);
+      }
+      tr.className = a.ok ? 'ok' : a.outcomeUnknown ? 'unknown' : '';
+      table.appendChild(tr);
+    }
+    out.appendChild(table);
   }
 
   function serverNow() {
@@ -230,7 +266,9 @@
       ['Source alive', s.lastAlivePerf != null ? 'yes' : 'NO (stale)'],
       ['Armed', snap.armed ? `yes — ${snap.armed.auctionId}` : 'no'],
       ['Target timing', `${snap.settings.targetMs} ms`],
-      ['Dry run', String(snap.settings.dryRun !== false)],
+      ['Mode', snap.liveMode ? 'LIVE — real bids' : 'dry run'],
+      ['Our user id', snap.selfUserId ?? 'unknown (needed to avoid bidding against yourself)'],
+      ['Sniper plan', snap.plan ? `fire at ${WBA.fmtTime(snap.plan.endTime - snap.plan.targetMs)} (server)` : '—'],
       [
         'Clock offset',
         ck.samples
@@ -296,6 +334,30 @@
       });
     })
   );
+  async function setLive(on) {
+    try {
+      await request(M.SET_LIVE, { on, confirmed: on });
+    } catch (e) {
+      appendLog({ t: Date.now(), level: 'error', msg: `panel: ${e.message}` });
+    }
+    render();
+  }
+  $('dryRun').addEventListener('change', () => {
+    if ($('dryRun').checked) {
+      $('liveConfirm').classList.add('hidden');
+      return setLive(false);
+    }
+    // Going live: keep the box ticked until explicitly confirmed.
+    $('dryRun').checked = true;
+    $('liveMax').textContent =
+      settings.maxBidMinor != null ? WBA.money.formatMoney(settings.maxBidMinor, snap && snap.state.currency) : 'NOT SET';
+    $('liveConfirm').classList.remove('hidden');
+  });
+  $('liveYes').addEventListener('click', () => {
+    $('liveConfirm').classList.add('hidden');
+    setLive(true);
+  });
+  $('liveNo').addEventListener('click', () => $('liveConfirm').classList.add('hidden'));
   $('arm').addEventListener('click', (ev) =>
     run(ev.target, () => request(snap && snap.armed ? M.DISARM : M.ARM))
   );

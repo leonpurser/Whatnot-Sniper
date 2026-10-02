@@ -23,6 +23,8 @@ function goodCtx(over = {}) {
     nextBidMinor: 2300,
     endTime: 10_000,
     lastAlivePerf: 1000,
+    bidCount: 5,
+    highestBidderId: '999',
   };
   return {
     state: { ...state, ...(over.state || {}) },
@@ -34,6 +36,7 @@ function goodCtx(over = {}) {
     nowPerf: 1500,
     staleMs: 3000,
     requireArmed: false,
+    selfUserId: '1',
     ...over,
     ...(over.state ? { state: { ...state, ...over.state } } : {}),
   };
@@ -63,6 +66,9 @@ test('validateBid fails safe on every unknown or violated condition', () => {
     'already past end': [{ serverNowMs: 10_001 }, 'not-ended'],
     'auto but not armed': [{ requireArmed: true, armed: false, armedAuctionId: 'A1' }, 'armed'],
     'armed on other auction': [{ requireArmed: true, armed: true, armedAuctionId: 'A0' }, 'armed-auction-matches'],
+    'already winning': [{ selfUserId: '999' }, 'not-already-highest'],
+    'self unknown with bids': [{ selfUserId: null }, 'not-already-highest'],
+    'high bidder unknown': [{ state: { highestBidderId: null } }, 'not-already-highest'],
   };
   for (const [name, [over, check]] of Object.entries(cases)) {
     const v = WBA.safety.validateBid(goodCtx(over));
@@ -141,62 +147,168 @@ test('discovery indexes auction-like keys and tolerates framing', () => {
   assert.deepEqual(hits, ['a.price = 1800']);
 });
 
-function makeExecutor(stateOver = {}, ctxOver = {}) {
-  const state = { ...WBA.createEmptyAuctionState(), auctionId: 'A1', active: true, currentBidMinor: 2200, nextBidMinor: 2300, endTime: Date.now() + 5000, lastAlivePerf: performance.now(), ...stateOver };
+function makeExecutor(stateOver = {}, ctxOver = {}, sendBid) {
+  const state = {
+    ...WBA.createEmptyAuctionState(),
+    auctionId: 'A1',
+    active: true,
+    currentBidMinor: 2200,
+    nextBidMinor: 2300,
+    currency: 'GBP',
+    bidCount: 3,
+    highestBidderId: '999',
+    endTime: Date.now() + 5000,
+    lastAlivePerf: performance.now(),
+    ...stateOver,
+  };
   const log = quietLog();
+  const sent = [];
   const ex = WBA.createBidExecutor({
     log,
-    getContext: () => ({ state, streamId: 'S1', serverNow: () => Date.now(), staleMs: 3000, armed: false, armedAuctionId: null, dryRun: true, ...ctxOver }),
+    getContext: () => ({ state, streamId: 'S1', serverNow: () => Date.now(), staleMs: 3000, armed: false, armedAuctionId: null, selfUserId: '1', dryRun: true, ...ctxOver }),
+    sendBid: async (args) => {
+      sent.push(args);
+      return sendBid ? sendBid(args, state) : { sent: false, reason: 'NO_SENDER' };
+    },
   });
-  return { ex, log };
+  return { ex, log, sent, state };
 }
+const BID = { trigger: 'manual', expectedStreamId: 'S1' };
+const okReply = (state) => ({
+  sent: true,
+  send: { t: Date.now(), p: performance.now() },
+  reply: { t: Date.now() + 100, p: performance.now() + 100, status: 'ok', response: { serverTimestamps: { accepted: state.endTime - 4321, responded: state.endTime - 4300 } } },
+});
 
-test('executor dry-run logs WOULD BID and blocks duplicates', async () => {
-  const { ex, log } = makeExecutor();
-  const r1 = await ex.placeBid('A1', 3000, { trigger: 'manual', expectedStreamId: 'S1' });
+test('executor dry-run logs WOULD BID, sends nothing and blocks duplicates', async () => {
+  const { ex, log, sent } = makeExecutor();
+  const r1 = await ex.placeBid('A1', 3000, BID);
   assert.equal(r1.ok, true);
   assert.equal(r1.reason, 'DRY_RUN');
+  assert.equal(sent.length, 0);
   assert.ok(log.entries().some((e) => e.msg.startsWith('WOULD BID auction=A1')));
-  const r2 = await ex.placeBid('A1', 3000, { trigger: 'manual', expectedStreamId: 'S1' });
-  assert.equal(r2.reason, 'DUPLICATE');
+  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'DUPLICATE');
+});
+
+test('executor live bid: sends exact next amount and records server timing', async () => {
+  const { ex, sent } = makeExecutor({}, { dryRun: false }, (args, state) => okReply(state));
+  const r = await ex.placeBid('A1', 3000, BID);
+  assert.deepEqual(sent, [{ auctionId: 'A1', amountMinor: 2300, currency: 'GBP' }]);
+  assert.equal(r.ok, true);
+  assert.equal(r.reason, 'ACCEPTED');
+  assert.equal(r.serverRemainingMs, 4321);
+  assert.equal(r.rttMs, 100);
+  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'DUPLICATE', 'never sends the same bid twice');
+});
+
+test('executor: not sent by page pre-check frees the slot; no reply is flagged unknown', async () => {
+  let mode = 'moved';
+  const { ex } = makeExecutor({}, { dryRun: false }, () =>
+    mode === 'moved' ? { sent: false, reason: 'PRICE_MOVED', detail: 'page next=2400' } : { sent: true, send: { t: 1, p: 1 }, reply: null, reason: 'NO_REPLY' }
+  );
+  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'NOT_SENT_PRICE_MOVED');
+  mode = 'silent';
+  const r = await ex.placeBid('A1', 3000, BID);
+  assert.equal(r.reason, 'NO_REPLY');
+  assert.equal(r.outcomeUnknown, true);
 });
 
 test('executor lock rejects concurrent bids', async () => {
-  // Non-dry-run awaits the (unimplemented) action, so the first call holds the lock.
-  const { ex } = makeExecutor({}, { dryRun: false });
-  const [a, b] = await Promise.all([
-    ex.placeBid('A1', 3000, { trigger: 'manual', expectedStreamId: 'S1' }),
-    ex.placeBid('A1', 3000, { trigger: 'manual', expectedStreamId: 'S1' }),
-  ]);
-  assert.deepEqual([a.reason, b.reason].sort(), ['BID_IN_PROGRESS', 'EXECUTOR_NOT_IMPLEMENTED']);
+  const { ex } = makeExecutor({}, { dryRun: false }, (args, state) => new Promise((res) => setTimeout(() => res(okReply(state)), 20)));
+  const [a, b] = await Promise.all([ex.placeBid('A1', 3000, BID), ex.placeBid('A1', 3000, BID)]);
+  assert.deepEqual([a.reason, b.reason].sort(), ['ACCEPTED', 'BID_IN_PROGRESS']);
 });
 
-test('executor never places a real bid in milestone 1', async () => {
-  const { ex } = makeExecutor({}, { dryRun: false });
-  const r = await ex.placeBid('A1', 3000, { trigger: 'manual', expectedStreamId: 'S1' });
-  assert.equal(r.ok, false);
-  assert.equal(r.reason, 'EXECUTOR_NOT_IMPLEMENTED');
-});
-
-test('executor aborts on wrong auction or over max', async () => {
-  let { ex } = makeExecutor();
-  assert.equal((await ex.placeBid('OTHER', 3000, { trigger: 'manual', expectedStreamId: 'S1' })).reason, 'VALIDATION_FAILED');
-  ({ ex } = makeExecutor());
-  const r = await ex.placeBid('A1', 2000, { trigger: 'manual', expectedStreamId: 'S1' });
-  assert.equal(r.reason, 'VALIDATION_FAILED');
-  assert.ok(r.failed.includes('within-max'));
+test('executor aborts on wrong auction, over max or when already winning', async () => {
+  let { ex, sent } = makeExecutor({}, { dryRun: false });
+  assert.equal((await ex.placeBid('OTHER', 3000, BID)).reason, 'VALIDATION_FAILED');
+  const over = await ex.placeBid('A1', 2000, BID);
+  assert.ok(over.failed.includes('within-max'));
+  ({ ex, sent } = makeExecutor({ highestBidderId: '1' }, { dryRun: false }));
+  const mine = await ex.placeBid('A1', 3000, BID);
+  assert.ok(mine.failed.includes('not-already-highest'));
+  assert.equal(sent.length, 0);
 });
 
 test('sniper disarms when the auction changes', () => {
   const log = quietLog();
   const store = WBA.createAuctionStateStore({ log });
   store.setStream('S1');
-  const settings = { ...WBA.constants.DEFAULT_SETTINGS };
-  const sniper = WBA.createSniper({ log, store, getSettings: () => settings });
+  const settings = { ...WBA.constants.DEFAULT_SETTINGS, maxBidMinor: 3000 };
+  const sniper = WBA.createSniper({ log, store, getSettings: () => settings, executor: { placeBid: async () => ({}) }, clock: WBA.createClock() });
   assert.equal(sniper.arm().ok, false, 'cannot arm without an auction');
-  store.update({ auctionId: 'A', active: true }, 't');
+  store.update({ auctionId: 'A', active: true, endTime: Date.now() + 60000 }, 't');
   assert.equal(sniper.arm().ok, true);
   assert.equal(sniper.armed.auctionId, 'A');
   store.update({ auctionId: 'B', active: true }, 't');
   assert.equal(sniper.armed, null);
+});
+
+test('sniper fires once at endTime - target, re-plans when the end time moves', async () => {
+  const log = quietLog();
+  const store = WBA.createAuctionStateStore({ log });
+  store.setStream('S1');
+  const settings = { ...WBA.constants.DEFAULT_SETTINGS, maxBidMinor: 3000, targetMs: 100 };
+  const calls = [];
+  const executor = {
+    placeBid: async (id, max, opts) => {
+      calls.push({ id, max, opts, remaining: store.get().endTime - Date.now() });
+      return { ok: true };
+    },
+  };
+  const sniper = WBA.createSniper({ log, store, getSettings: () => settings, executor, clock: WBA.createClock() });
+  store.update({ auctionId: 'A', active: true, endTime: Date.now() + 300 }, 't');
+  assert.equal(sniper.arm().ok, true);
+  await new Promise((r) => setTimeout(r, 150));
+  assert.equal(calls.length, 0, 'not yet');
+  // A late bid extends the auction by 250ms: plan moves.
+  store.update({ auctionId: 'A', endTime: store.get().endTime + 250 }, 't');
+  await new Promise((r) => setTimeout(r, 450));
+  assert.equal(calls.length, 1, 'fired exactly once');
+  const c = calls[0];
+  assert.equal(c.id, 'A');
+  assert.equal(c.opts.trigger, 'auto');
+  assert.equal(c.opts.expectedStreamId, 'S1');
+  assert.ok(c.remaining <= 105 && c.remaining >= 60, `fired ${c.remaining}ms before end`);
+  assert.ok(c.opts.plannedLateMs < 15, `scheduler late ${c.opts.plannedLateMs}ms`);
+  sniper.disarm('test');
+});
+
+test('sniper never fires after the auction changes', async () => {
+  const log = quietLog();
+  const store = WBA.createAuctionStateStore({ log });
+  store.setStream('S1');
+  const settings = { ...WBA.constants.DEFAULT_SETTINGS, maxBidMinor: 3000, targetMs: 100 };
+  let calls = 0;
+  const sniper = WBA.createSniper({ log, store, getSettings: () => settings, executor: { placeBid: async () => calls++ }, clock: WBA.createClock() });
+  store.update({ auctionId: 'A', active: true, endTime: Date.now() + 200 }, 't');
+  sniper.arm();
+  store.update({ auctionId: 'B', active: true, endTime: Date.now() + 150 }, 't');
+  await new Promise((r) => setTimeout(r, 250));
+  assert.equal(calls, 0);
+  assert.equal(sniper.armed, null);
+});
+
+test('clock round trips give a tight two-sided interval', () => {
+  const clock = WBA.createClock();
+  // Real numbers from a captured bid: sent 553974, accepted 554031, responded 554047, received 554139.
+  clock.addRoundTrip(1790960553974, 1790960554139, 1790960554031, 1790960554047);
+  const s = clock.snapshot();
+  assert.equal(s.lo, -92);
+  assert.equal(s.hi, 57);
+});
+
+test('a dry run does not block the live bid that follows it', async () => {
+  const mode = { dryRun: true };
+  const state = { ...WBA.createEmptyAuctionState(), auctionId: 'A1', active: true, currentBidMinor: 0, nextBidMinor: 100, currency: 'GBP', bidCount: 0, endTime: Date.now() + 5000, lastAlivePerf: performance.now() };
+  const sent = [];
+  const ex = WBA.createBidExecutor({
+    log: quietLog(),
+    getContext: () => ({ state, streamId: 'S1', serverNow: () => Date.now(), staleMs: 3000, selfUserId: '1', dryRun: mode.dryRun }),
+    sendBid: async (a) => (sent.push(a), okReply(state)),
+  });
+  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'DRY_RUN');
+  mode.dryRun = false;
+  assert.equal((await ex.placeBid('A1', 3000, BID)).reason, 'ACCEPTED');
+  assert.equal(sent.length, 1);
 });

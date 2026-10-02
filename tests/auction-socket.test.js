@@ -151,3 +151,64 @@ test('a live auction from the socket passes validation only within max', () => {
   assert.equal(ok.bidAmountMinor, 200);
   assert.equal(WBA.safety.validateBid({ ...base, maxBidMinor: 199 }).ok, false);
 });
+
+const bidsFx = require('./fixtures/auction-socket-bids.json');
+function replayBids(streamId) {
+  const log = WBA.createLog({ consoleOut: false });
+  const store = WBA.createAuctionStateStore({ log });
+  const clock = WBA.createClock();
+  const capture = WBA.createCaptureStore({ limit: 10, maxStoreChars: 100, keyPattern: /x/, maxFields: 1 });
+  const source = WBA.createAuctionSocketSource();
+  capture.subscribe((entry, json) => source.onCapture(entry, json, { store, clock, log }));
+  store.setStream(streamId);
+  const seen = [];
+  for (const e of bidsFx.entries) {
+    const { kind, ...payload } = e;
+    capture.add(kind, payload);
+    const f = e.text ? JSON.parse(e.text) : null;
+    if (f) seen.push({ kind, event: f[3], s: JSON.parse(JSON.stringify(store.get())) });
+  }
+  return { store, clock, source, seen };
+}
+
+test('real Sudden Death auction (joined 590ms before end) is recognised', () => {
+  const { seen, source } = replayBids(bidsFx.sdStreamId);
+  const joined = seen.find((x) => x.event === 'user_joined').s;
+  assert.equal(joined.active, true);
+  assert.equal(joined.suddenDeath, true);
+  assert.equal(joined.endTimeExtends, false);
+  assert.equal(joined.currentBidMinor, 1100);
+  assert.equal(joined.nextBidMinor, 1300);
+  const ended = seen.find((x) => x.event === 'auction_ended').s;
+  assert.equal(ended.status, 'ended');
+  assert.equal(source.stats().endLagsMs.length, 1);
+  assert.equal(source.getSelfUserId(), '1000001');
+});
+
+test('real bids: own bid recognised, round trips tighten the clock', () => {
+  const { seen, clock } = replayBids(bidsFx.bidStreamId);
+  const bids = seen.filter((x) => x.event === 'new_bid');
+  const mine = bids.filter((x) => x.s.highestBidderId === '1000001');
+  assert.equal(mine.length, 2, 'both of our bids seen as highest');
+  assert.equal(mine[0].s.currentBidMinor, 100);
+  assert.equal(mine[1].s.currentBidMinor, 700);
+  const c = clock.snapshot();
+  assert.ok(c.sources.includes('round-trip'));
+  assert.ok(c.hi - c.lo < 100, `offset interval ${c.lo}..${c.hi}`);
+
+  // While we are the highest bidder, validation refuses to bid against ourselves.
+  const s = mine[1].s;
+  const v = WBA.safety.validateBid({
+    state: { ...s, lastAlivePerf: 0 },
+    expectedAuctionId: s.auctionId,
+    streamId: bidsFx.bidStreamId,
+    expectedStreamId: bidsFx.bidStreamId,
+    maxBidMinor: 5000,
+    serverNowMs: s.endTime - 3000,
+    nowPerf: 0,
+    staleMs: 15000,
+    selfUserId: '1000001',
+  });
+  assert.equal(v.ok, false);
+  assert.deepEqual(v.checks.filter((c) => !c.ok).map((c) => c.name), ['not-already-highest']);
+});

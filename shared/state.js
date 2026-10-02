@@ -26,6 +26,8 @@
     'ended',
     'bidCount',
     'highestBidder', // username of the current high bidder
+    'highestBidderId', // user id of the current high bidder (compared with our own id)
+    'endTimeExtends', // false for Sudden Death (product.auctionIncrementEndTime)
     'bumpThresholdSeconds', // normal auctions: a bid with < this many seconds left extends the timer
     'bumpValueSeconds', // ...to this many seconds
   ]);
@@ -43,6 +45,8 @@
       ended: false,
       bidCount: null,
       highestBidder: null,
+      highestBidderId: null,
+      endTimeExtends: null,
       bumpThresholdSeconds: null,
       bumpValueSeconds: null,
       status: WBA.STATUS.IDLE,

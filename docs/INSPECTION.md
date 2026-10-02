@@ -1,4 +1,7 @@
-# Milestone 1 — inspecting a real Whatnot auction
+# Inspecting a real Whatnot auction
+
+> Milestone 1 is done (see FINDINGS.md). Still useful: a capture with a **Sudden Death
+> auction that gets late bids**, and one where a bid of yours is **rejected**.
 
 Goal: find where Whatnot's auction state comes from (WebSocket, GraphQL response,
 React props, or DOM) without guessing. Do the steps below on a real stream and send

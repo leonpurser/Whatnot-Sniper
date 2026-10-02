@@ -112,7 +112,15 @@
       return true;
     }
 
-    const QUIET_FIELDS = new Set(['bidCount', 'highestBidder', 'bumpThresholdSeconds', 'bumpValueSeconds', 'currency']);
+    const QUIET_FIELDS = new Set([
+      'bidCount',
+      'highestBidder',
+      'highestBidderId',
+      'bumpThresholdSeconds',
+      'bumpValueSeconds',
+      'currency',
+      'endTimeExtends',
+    ]);
 
     function logChange(k, old, v, source) {
       if (QUIET_FIELDS.has(k)) return;

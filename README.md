@@ -3,10 +3,13 @@
 A bidding/sniping assistant for live auctions on Whatnot's desktop site. It runs in the
 Whatnot tab you are already logged into. It never asks for credentials.
 
-**Current stage: milestone 1, auction state.** Live auction state (item, price, next bid,
-server end time, Sudden Death flag, start/end) is read from Whatnot's auction WebSocket.
-See [docs/FINDINGS.md](docs/FINDINGS.md). **It cannot place a real bid**: the bid executor
-is a stub that only validates and dry-runs.
+**Current stage: milestone 2, bidding and sniping (testing).** Live auction state is read from
+Whatnot's auction WebSocket. Bids are sent exactly as the page sends them: a `place_bid`
+push on the page's own socket. The sniper fires at a configurable time before the server
+end time. See [docs/FINDINGS.md](docs/FINDINGS.md).
+
+**Dry run is the default.** Live bidding must be confirmed in the side panel each time,
+and it switches off on every page reload or stream change.
 
 ## Install (unpacked)
 
@@ -32,11 +35,14 @@ content/page-bridge.js ──► content/capture-store.js   ring buffer + field 
                                 │                 identity changes reset everything,
                                 │                 finished auctions are retired
                                 ▼
-                       content/sniper.js          TIMING ENGINE (arm state only for now)
+                       content/sniper.js          TIMING ENGINE: setTimeout → MessageChannel spin → fire
                                 │  placeBid(expectedAuctionId, max, opts)
                                 ▼
-                       content/bid-executor.js    BID EXECUTOR: lock → validate → dry-run/execute
-                                                  (performBidAction not implemented)
+                       content/bid-executor.js    BID EXECUTOR: lock → validate → dedupe → dry-run | send
+                                │  bridge.request('place-bid')
+                                ▼
+                       page/page-hook.js          last-moment check (auction id, active, exact
+                                                  next price) → place_bid on the page's socket
 
 content/whatnot.js       wires it together + Port to the side panel
 content/clock.js         server/client clock offset (interval intersection)
@@ -57,7 +63,10 @@ Design rules already enforced:
   retired auction are ignored.
 - The executor has a lock, refuses duplicate `auctionId:amount` submissions, and
   re-validates at fire time. A stale timer therefore cannot bid on a different auction.
-- Dry run is forced on.
+- Never bids against yourself (`not-already-highest`). Your user id comes from the
+  page's `general:<id>` channel.
+- Live mode is in memory only and is cleared on reload or stream change.
+- `NO_REPLY` is reported as **outcome unknown**, never as "not placed".
 
 ## Development
 
@@ -66,8 +75,13 @@ npm test        # unit tests + replay of a sanitized real auction capture (tests
 npm run check   # syntax-check every JS file
 ```
 
-## Next steps
+## Testing plan
 
-Still needed from a live stream (see [docs/INSPECTION.md](docs/INSPECTION.md)): a Sudden Death
-auction, and one manual bid, to learn how Whatnot submits a bid. After that come the
-scheduler (milestone 2) and the real bid action.
+1. **Dry runs.** Arm several auctions in dry run (normal and Sudden Death) at different
+   targets. The "Bid attempts & timing" table shows how far before the end each shot
+   would have fired, and how late the scheduler was.
+2. **Manual live bids.** On cheap items, check that BID NOW is accepted and note
+   `server left` and `rtt`.
+3. **Live sniping on Sudden Death.** Start conservatively (1000 ms) and step down
+   (750 → 500 → 350 → 250), recording which bids are accepted. `server left` is exact:
+   the server's own accept time against the end time, so no clock guess is involved.

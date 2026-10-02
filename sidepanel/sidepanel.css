@@ -258,3 +258,23 @@ table.fields th {
 .l-error {
   color: var(--danger);
 }
+body.live .card {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 2px var(--danger) inset;
+}
+#history tr.ok td {
+  color: var(--ok);
+}
+#history tr.unknown td {
+  color: #b06000;
+}
+.confirm {
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  padding: 8px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.confirm p {
+  margin: 4px 0;
+}

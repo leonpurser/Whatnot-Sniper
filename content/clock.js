@@ -10,6 +10,8 @@
 //   * A server timestamp S in a pushed message received at local time R:
 //     S was generated before R, so server time at R is ≥ S, giving
 //     offset ≥ S - R (a lower bound only; the latency is unknown).
+//   * A request sent at local Ts, accepted by the server at A, replied at R and
+//     received at local Tr: offset ∈ [R - Tr, A - Ts] (two-sided, usually tight).
 // If the intersection becomes empty (clock jump, cached Date header) we reset
 // to the newest sample.
 (function (g) {
@@ -51,6 +53,11 @@
         const d = Date.parse(header);
         if (!Number.isFinite(d) || !Number.isFinite(startEpoch) || !Number.isFinite(endEpoch)) return false;
         constrain(d - endEpoch, d + 1000 - startEpoch, 'http-date');
+        return true;
+      },
+      addRoundTrip(sendEpoch, recvEpoch, acceptedMs, respondedMs) {
+        if (![sendEpoch, recvEpoch, acceptedMs, respondedMs].every(Number.isFinite)) return false;
+        constrain(respondedMs - recvEpoch, acceptedMs - sendEpoch, 'round-trip');
         return true;
       },
       addServerTimestamp(serverMs, recvEpoch) {

@@ -48,12 +48,43 @@ the matching WebSocket frame.
 - Clock offset from HTTP Date intervals: +37 ms ± 68 ms after 202 samples. Server
   timestamps now add lower bounds.
 
+## Capture 2: 2026-10-02, two manual bids, one Sudden Death auction (seen on join)
+
+### How the page bids
+
+A Phoenix push on the **same** auction socket and channel:
+
+```
+→ [joinRef "11", ref "21", "commerce:<livestreamId>", "place_bid", {
+     bidType: "STANDARD_BID", isCustomBid: false,
+     price: { amount: 100, currency: "GBP" },        // = nextBidPrice at that moment
+     productId: "<auction product.id>",
+     sloStories: [...telemetry...], validatePotentialTrollBid: false }]
+← new_bid broadcast (highestBidder = us)            ~102 ms after send
+← [ "11", "21", topic, "phx_reply", { status: "ok", response: {
+     serverTimestamps: { accepted, responded }, highestBidder: {...} } }]   ~145–165 ms
+```
+
+The second bid carried `price.amountSafe: 700` in addition to `amount`; it is not needed.
+
+- Send → server `accepted`: ~57 ms (raw clocks). The round-trip interval for the
+  offset is `[responded − received, accepted − sent]` = `[-92, 57]` ms from one bid.
+  Combined with the Date headers this narrows to about ±30 ms.
+- Our user id is the live-socket channel `general:<userId>`. `new_bid.highestBidder.id`
+  tells us whether we are already winning.
+
+### Sudden Death (one auction, joined 590 ms before its end)
+
+`isSuddenDeath: true`, `auctionIncrementEndTime: false` (it was `true` on every normal
+auction), `bumpThresholdSeconds`/`bumpValueSeconds: null`. `auction_ended` arrived
+**1 209 ms** after `auctionEndTime` (normal auctions: 859–898 ms).
+
 ### Still unknown
 
-1. **Sudden Death**: no SD auction was captured. We need to confirm that
-   `isSuddenDeath: true` appears and that `auctionEndTime` does not move on late bids.
-2. **How a bid is placed**: the capture contains no bid by this user. The outgoing
-   frames on the auction socket were only `phx_join`, `heartbeat`, `extend_session_v3`
-   and `phx_leave`. The bid could be a GraphQL mutation or a socket push; we need one
-   manual bid captured.
-3. Whether `new_bid` with `bidAccepted: false` exists, e.g. for your own rejected bid.
+1. Whether a Sudden Death end time really stays fixed when bids land late. Every
+   structural signal says yes, but no late bid has been observed yet.
+2. **The real acceptance cutoff.** Is a bid accepted at T−100 ms? At T+100 ms, inside
+   the ~0.9–1.2 s before `auction_ended`? This can only be measured with dry runs first,
+   then small live bids, comparing `serverRemainingMs` with the outcome.
+3. What a rejected bid's `phx_reply` looks like (`status: "error"` presumably), and
+   whether `bidAccepted: false` is ever broadcast.

@@ -17,6 +17,7 @@
     PICK_ELEMENT: 'pickElement',
     GLOBALS_PROBE: 'globalsProbe',
     ADD_MARKER: 'addMarker',
+    SET_LIVE: 'setLive',
     BID_NOW: 'bidNow',
     ARM: 'arm',
     DISARM: 'disarm',

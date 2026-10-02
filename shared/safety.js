@@ -18,6 +18,7 @@
    * @param {boolean} ctx.requireArmed    automatic bids require the sniper to be armed
    * @param {boolean} ctx.armed
    * @param {string|null} ctx.armedAuctionId
+   * @param {string|null} ctx.selfUserId  our Whatnot user id (to avoid bidding against ourselves)
    */
   function validateBid(ctx) {
     const s = ctx.state || {};
@@ -59,6 +60,16 @@
       'next-bid-above-current',
       required != null && Number.isInteger(s.currentBidMinor) && required > s.currentBidMinor,
       `next=${required} current=${s.currentBidMinor}`
+    );
+
+    // Never raise our own winning bid. With no bids nobody is winning; otherwise
+    // both ids must be known.
+    const noBids = s.bidCount === 0;
+    const selfKnown = ctx.selfUserId != null;
+    add(
+      'not-already-highest',
+      noBids || (selfKnown && s.highestBidderId != null && String(s.highestBidderId) !== String(ctx.selfUserId)),
+      noBids ? 'no bids yet' : `high=${s.highestBidderId} self=${ctx.selfUserId ?? 'unknown'}`
     );
 
     const max = ctx.maxBidMinor;
